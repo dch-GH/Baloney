@@ -19,7 +19,7 @@ pub struct TileMap {
     tiles: Vec<tiled::TileId>,
 }
 
-pub(crate) fn create_tilemap(commands: &mut Commands, resources: Res<GameResourceHandles>) -> () {
+pub(crate) fn create_tilemap(commands: &mut Commands, resources: &Res<GameResourceHandles>) -> () {
     let mut loader = Loader::new();
     let map = match loader.load_tmx_map("assets/map.tmx") {
         Ok(map) => map,

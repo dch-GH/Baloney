@@ -5,9 +5,10 @@ edition = "2021"
 
 [profile.dev]
 opt-level = 1
+incremental = true
 
 [build]
-incremental = true
+rustflags = ["-Z", "threads=8"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

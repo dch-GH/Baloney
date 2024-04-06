@@ -5,6 +5,8 @@ use bevy::{
 };
 use bevy_rapier3d::control::KinematicCharacterController;
 
+use crate::{LowResCamera, MainCamera};
+
 #[derive(Component)]
 pub struct Player {}
 
@@ -22,8 +24,19 @@ pub fn move_player(
         ),
         With<Player>,
     >,
-    mut cam_query: Query<&mut Transform, (With<Camera3d>, Without<Player>)>,
-    mut light_query: Query<&mut Transform, (With<PointLight>, Without<Player>, Without<Camera3d>)>,
+    mut cam_query: Query<
+        &mut Transform,
+        (With<LowResCamera>, Without<Player>, Without<MainCamera>),
+    >,
+    mut light_query: Query<
+        &mut Transform,
+        (
+            With<PointLight>,
+            Without<Player>,
+            Without<MainCamera>,
+            Without<LowResCamera>,
+        ),
+    >,
     key: Res<ButtonInput<KeyCode>>,
     mut mouse_motion_events: EventReader<MouseMotion>,
     time: Res<Time>,
