@@ -1,8 +1,12 @@
+use crate::mathx::*;
 use bevy::{math::vec3, prelude::*, render::mesh};
 use bevy_rapier3d::prelude::*;
 use tiled::Loader;
 
+use crate::GameResourceHandles;
+
 const CHUNK_SIZE: i32 = 8;
+pub const TILE_SIZE: f32 = 4.0;
 
 enum Tile {
     Air,
@@ -15,11 +19,7 @@ pub struct TileMap {
     tiles: Vec<tiled::TileId>,
 }
 
-pub(crate) fn create_tilemap(
-    commands: &mut Commands,
-    mesh_h: &Handle<Mesh>,
-    mat_h: &Handle<StandardMaterial>,
-) -> () {
+pub(crate) fn create_tilemap(commands: &mut Commands, resources: Res<GameResourceHandles>) -> () {
     let mut loader = Loader::new();
     let map = match loader.load_tmx_map("assets/map.tmx") {
         Ok(map) => map,
@@ -45,21 +45,63 @@ pub(crate) fn create_tilemap(
                 tm.tiles.push(tile_id);
 
                 match tile_id {
-                    0 => {}
-                    1 => {
+                    // Floor
+                    0 => {
                         commands
                             .spawn(PbrBundle {
-                                mesh: mesh_h.clone(),
-                                material: mat_h.clone(),
+                                mesh: resources.plane.clone(),
+                                material: resources.floor_material.clone(),
                                 transform: Transform::IDENTITY.with_translation(vec3(
-                                    x as f32 * 4.0,
-                                    -4.0,
-                                    y as f32 * 4.0,
+                                    x as f32 * TILE_SIZE,
+                                    -TILE_SIZE * 1.5,
+                                    y as f32 * TILE_SIZE,
                                 )),
                                 ..default()
                             })
                             .insert(RigidBody::Fixed)
-                            .insert(Collider::cuboid(1.0, 1.0, 1.0));
+                            .insert(Collider::cuboid(TILE_SIZE / 2.0, 0.1, TILE_SIZE / 2.0));
+
+                        // Ceiling
+                        commands
+                            .spawn(PbrBundle {
+                                mesh: resources.plane.clone(),
+                                material: resources.ceiling_material.clone(),
+                                transform: Transform::IDENTITY
+                                    .with_translation(vec3(
+                                        x as f32 * TILE_SIZE,
+                                        -2.0,
+                                        y as f32 * TILE_SIZE,
+                                    ))
+                                    .with_rotation(Quat::from_euler(
+                                        EulerRot::XYZ,
+                                        degrees_to_radians_f32(180.0),
+                                        0.0,
+                                        0.0,
+                                    )),
+                                ..default()
+                            })
+                            .insert(RigidBody::Fixed)
+                            .insert(Collider::cuboid(TILE_SIZE / 2.0, 0.1, TILE_SIZE / 2.0));
+                    }
+                    // Wall
+                    1 => {
+                        commands
+                            .spawn(PbrBundle {
+                                mesh: resources.cube.clone(),
+                                material: resources.wall_material.clone(),
+                                transform: Transform::IDENTITY.with_translation(vec3(
+                                    x as f32 * TILE_SIZE,
+                                    -TILE_SIZE,
+                                    y as f32 * TILE_SIZE,
+                                )),
+                                ..default()
+                            })
+                            .insert(RigidBody::Fixed)
+                            .insert(Collider::cuboid(
+                                TILE_SIZE / 2.0,
+                                TILE_SIZE / 2.0,
+                                TILE_SIZE / 2.0,
+                            ));
                     }
                     _ => {}
                 };
