@@ -1,16 +1,20 @@
+#![allow(warnings)]
+
 mod mathx;
 mod player;
 mod resources;
 mod tilemap;
 mod windows;
 
+use bevy_obj::ObjPlugin;
 use player::*;
 use resources::*;
 use tilemap::*;
 
 use bevy::{
-    asset::LoadState,
+    asset::{self, LoadState},
     ecs::query::QueryData,
+    gltf::Gltf,
     input::{self, keyboard::KeyboardInput, mouse::MouseMotion},
     log::LogPlugin,
     math::vec3,
@@ -21,6 +25,7 @@ use bevy::{
         texture::{ImageAddressMode, ImageLoaderSettings, ImageSampler, ImageSamplerDescriptor},
     },
     utils::petgraph::visit::Control,
+    window::{Cursor, CursorGrabMode},
 };
 use bevy_rapier3d::{control, prelude::*};
 
@@ -40,19 +45,36 @@ fn main() {
                     level: bevy::log::Level::ERROR,
                     ..default()
                 })
-                .set(ImagePlugin::default_nearest()),
+                .set(ImagePlugin::default_nearest())
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: "Game".into(),
+                        cursor: Cursor {
+                            grab_mode: CursorGrabMode::Confined,
+                            visible: false,
+                            ..default()
+                        },
+                        ..default()
+                    }),
+                    ..default()
+                }),
         )
         .insert_resource(CameraParameters(PhysicalCameraParameters {
             aperture_f_stops: 1.0,
             shutter_speed_s: 1.0 / 125.0,
             sensitivity_iso: 100.0,
         }))
+        .insert_resource(UserSettings { mouse_sens: 0.25 })
         .insert_resource(GameResourceHandles::default())
+        .add_plugins(ObjPlugin)
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
-        .add_plugins(RapierDebugRenderPlugin::default())
+        .add_plugins(RapierDebugRenderPlugin {
+            enabled: false,
+            ..default()
+        })
         .add_systems(PreStartup, init_resources)
         .add_systems(Startup, start)
-        .add_systems(Update, (render_cameras, move_player))
+        .add_systems(Update, (move_player, dice_system))
         .add_systems(Startup, windows::window_start)
         .add_systems(Update, (windows::window_update, debug_info))
         .run();
@@ -60,6 +82,7 @@ fn main() {
 
 fn start(
     mut commands: Commands,
+    asset_server: Res<AssetServer>,
     resources: Res<GameResourceHandles>,
     cam_parameters: Res<CameraParameters>,
 ) {
@@ -72,9 +95,12 @@ fn start(
                 local: Transform::IDENTITY.with_translation(vec3(4.0, -3.5, 4.0)),
                 global: GlobalTransform::IDENTITY,
             })
-            .insert(bevy_rapier3d::control::KinematicCharacterController { ..default() })
+            .insert(bevy_rapier3d::control::KinematicCharacterController {
+                apply_impulse_to_dynamic_bodies: true,
+                custom_mass: Some(1.0),
+                ..default()
+            })
             .insert(Player {})
-            .insert(Jumper { jump_time: 0.0 })
             .insert(Collider::capsule_y(0.885, 0.25));
     }
 
@@ -114,7 +140,7 @@ fn start(
             ..default()
         },
         FogSettings {
-            color: Color::rgba(0.25, 0.25, 0.25, 1.0),
+            color: Color::rgba(0.11, 0.15, 0.1, 1.0),
             falloff: FogFalloff::Linear {
                 start: 5.0,
                 end: 20.0,
@@ -158,16 +184,6 @@ fn start(
                 ..default()
             });
         });
-}
-
-fn render_cameras(
-    mut main_query: Query<&mut Camera, With<MainCamera>>,
-    mut low_res_query: Query<&mut Camera, (With<LowResCamera>, Without<MainCamera>)>,
-    resources: Res<GameResourceHandles>,
-) {
-    let mut main = main_query.single_mut();
-    let mut low_res = low_res_query.single_mut();
-    // low_res.target = RenderTarget::Image(resources.render_texture.clone());
 }
 
 fn debug_info(key: Res<ButtonInput<KeyCode>>, mut physics_debug: ResMut<DebugRenderContext>) {

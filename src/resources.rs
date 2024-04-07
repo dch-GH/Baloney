@@ -21,8 +21,10 @@ pub struct GameResourceHandles {
     pub floor_material: Handle<StandardMaterial>,
     pub ceiling_material: Handle<StandardMaterial>,
     pub wall_material: Handle<StandardMaterial>,
+    pub dice_material: Handle<StandardMaterial>,
     pub cube: Handle<Mesh>,
     pub plane: Handle<Mesh>,
+    pub dice_mesh: Handle<Mesh>,
     pub render_texture: Handle<Image>,
 }
 
@@ -36,6 +38,7 @@ pub fn init_resources(
     let cobble_texture_handle: Handle<Image> = assets.load("cobble.png");
     let mossy_cobble_texture_handle: Handle<Image> = assets.load("mossy_cobble.png");
     let brick_texture_handle: Handle<Image> = assets.load("brick.png");
+    let dice_texture_handle: Handle<Image> = assets.load("cardsMedium_tilemap_packed.png");
 
     let ceiling = assets.add(StandardMaterial {
         base_color: Color::WHITE,
@@ -61,15 +64,23 @@ pub fn init_resources(
         ..default()
     });
 
+    let dice_material = assets.add(StandardMaterial {
+        base_color: Color::WHITE,
+        base_color_texture: Some(dice_texture_handle.clone()),
+        unlit: false,
+        ..default()
+    });
+
     let cube_handle = meshes.add(Cuboid {
         half_size: Vec3::ONE * 2.0,
     });
 
     let plane_handle = meshes.add(Plane3d::default().mesh().size(TILE_SIZE, TILE_SIZE));
+    let dice_mesh: Handle<Mesh> = assets.load("meshes/dice.obj");
 
     let size = Extent3d {
-        width: 160,
-        height: 120,
+        width: 160 * 2,
+        height: 120 * 2,
         ..default()
     };
 
@@ -96,7 +107,14 @@ pub fn init_resources(
     resources.ceiling_material = ceiling;
     resources.wall_material = wall;
     resources.floor_material = floor;
+    resources.dice_material = dice_material;
+    resources.dice_mesh = dice_mesh;
     resources.cube = cube_handle;
     resources.plane = plane_handle;
     resources.render_texture = render_texture_handle;
+}
+
+#[derive(Resource, Default)]
+pub struct UserSettings {
+    pub mouse_sens: f32,
 }

@@ -1,29 +1,31 @@
 use bevy::{
+    app::AppExit,
     ecs::{component::Component, event::EventReader, query::QueryData},
     input::mouse::MouseMotion,
+    math::vec3,
     prelude::*,
 };
-use bevy_rapier3d::control::KinematicCharacterController;
+use bevy_rapier3d::{
+    control::KinematicCharacterController,
+    dynamics::{AdditionalMassProperties, ExternalImpulse, RigidBody, Sleeping, Velocity},
+    geometry::Collider,
+    na::Dynamic,
+    rapier::dynamics::BodyPair,
+};
 
-use crate::{LowResCamera, MainCamera};
+use crate::{GameResourceHandles, LowResCamera, MainCamera, UserSettings};
 
 #[derive(Component)]
 pub struct Player {}
 
 #[derive(Component)]
-pub struct Jumper {
-    pub jump_time: f32,
+pub struct Dice {
+    rolled: bool,
 }
 
 pub fn move_player(
-    mut query: Query<
-        (
-            &mut Transform,
-            &mut KinematicCharacterController,
-            &mut Jumper,
-        ),
-        With<Player>,
-    >,
+    mut commands: Commands,
+    mut query: Query<(&mut Transform, &mut KinematicCharacterController), With<Player>>,
     mut cam_query: Query<
         &mut Transform,
         (With<LowResCamera>, Without<Player>, Without<MainCamera>),
@@ -37,14 +39,16 @@ pub fn move_player(
             Without<LowResCamera>,
         ),
     >,
-    key: Res<ButtonInput<KeyCode>>,
+    resources: Res<GameResourceHandles>,
     mut mouse_motion_events: EventReader<MouseMotion>,
     time: Res<Time>,
+    key: Res<ButtonInput<KeyCode>>,
+    user_cfg: Res<UserSettings>,
 ) {
     let dt = time.delta_seconds();
     let mv_speed = 10.0;
 
-    let (player_xform, mut controller, mut jumper) = query.single_mut();
+    let (player_xform, mut controller) = query.single_mut();
     let mut cam_xform = cam_query.single_mut();
     let mut pl_xform = light_query.single_mut();
 
@@ -75,42 +79,68 @@ pub fn move_player(
     velocity.z = f32::clamp(velocity.z, -32.0, 32.0);
     velocity += Direction3d::NEG_Y * 9.82 * dt;
 
-    const MAX_JUMP_TIME: f32 = 0.13;
+    let eye_offset = Direction3d::Y * 0.7;
+    cam_xform.translation = player_xform.translation + eye_offset;
 
-    if key.just_released(KeyCode::Space) {
-        // velocity += Direction3d::Y * 6.0;
-        jumper.jump_time += dt;
-    }
-
-    if jumper.jump_time > 0.0 && jumper.jump_time < MAX_JUMP_TIME {
-        velocity += Direction3d::Y * 0.15;
-        jumper.jump_time += dt;
-    }
-
-    if jumper.jump_time >= MAX_JUMP_TIME {
-        jumper.jump_time = 0.0
-    }
-
-    cam_xform.translation = player_xform.translation
-        + Vec3 {
-            x: 0.0,
-            y: 0.7,
-            z: 0.0,
-        };
     controller.translation = Some(velocity);
 
     for ev in mouse_motion_events.read() {
-        // println!("Mouse moved: X: {} px, Y: {} px", ev.delta.x, ev.delta.y);
-        cam_xform.rotation *= Quat::from_euler(EulerRot::XYZ, 0.0, ev.delta.x * -0.015, 0.0);
+        cam_xform.rotation *= Quat::from_euler(
+            EulerRot::XYZ,
+            0.0,
+            -ev.delta.x * user_cfg.mouse_sens * dt,
+            0.0,
+        );
     }
-    // println!("{}", controller.translation.unwrap());
 
     if key.pressed(KeyCode::ArrowLeft) {
         cam_xform.rotate_y(2.0 * dt);
-        println!("{:?}", player_xform.translation);
     } else if key.pressed(KeyCode::ArrowRight) {
         cam_xform.rotate_y(-2.0 * dt);
     }
 
-    pl_xform.translation = player_xform.translation;
+    if key.just_pressed(KeyCode::Space) {
+        // println!("{:?}", player_xform.translation);
+        let eye_pos = cam_xform.translation + fwd * 1.5;
+        commands
+            .spawn(PbrBundle {
+                mesh: resources.dice_mesh.clone(),
+                material: resources.dice_material.clone(),
+                transform: Transform::IDENTITY.with_translation(eye_pos),
+                ..default()
+            })
+            .insert(Dice { rolled: false })
+            .insert(RigidBody::Dynamic)
+            .insert(Velocity { ..default() })
+            .insert(Collider::cuboid(0.25, 0.25, 0.25))
+            .insert(AdditionalMassProperties::Mass(9.0))
+            .insert(ExternalImpulse {
+                impulse: fwd * 0.3,
+                torque_impulse: vec3(0.03, -0.02, 0.04),
+            });
+    }
+
+    pl_xform.translation = player_xform.translation + eye_offset * 0.35;
+}
+
+pub fn dice_system(
+    mut query: Query<(&Transform, &bevy_rapier3d::dynamics::Velocity, &mut Dice), With<Dice>>,
+) {
+    if query.is_empty() {
+        return;
+    }
+
+    for (dice_xform, vel, mut dice) in query.iter_mut() {
+        if dice.rolled {
+            continue;
+        }
+
+        if vel.angvel.length() <= 0.1 || vel.linvel.length() <= 0.1 {
+            dice.rolled = true;
+            // TODO: something like this
+            //event.send(DiceRolledEvent{})
+        }
+
+        println!("{:?}", vel.linvel);
+    }
 }

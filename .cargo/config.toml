@@ -1,0 +1,4 @@
+
+[build]
+rustflags = ["-Z", "threads=12"]
+incremental = true
