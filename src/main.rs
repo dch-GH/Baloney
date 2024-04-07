@@ -42,9 +42,12 @@ pub struct LowResCamera;
 pub struct MainCamera;
 
 fn main() {
-    App::new()
+    let mut app = App::new();
+
+    // Plugins
+    {
         // TODO: ERROR log: VALIDATION [VUID-VkRenderPassBeginInfo-framebuffer-04627 (0x45125641)]
-        .add_plugins(
+        app.add_plugins(
             DefaultPlugins
                 .set(LogPlugin {
                     filter: "off".into(),
@@ -64,38 +67,51 @@ fn main() {
                     }),
                     ..default()
                 }),
-        )
-        .insert_resource(CameraParameters(PhysicalCameraParameters {
+        );
+        app.add_plugins(ObjPlugin);
+        app.add_plugins(RapierPhysicsPlugin::<NoUserData>::default());
+        app.add_plugins(RapierDebugRenderPlugin {
+            enabled: false,
+            ..default()
+        });
+        app.add_plugins(Sprite3dPlugin);
+    }
+
+    // Resources
+    {
+        app.insert_resource(CameraParameters(PhysicalCameraParameters {
             aperture_f_stops: 1.0,
             shutter_speed_s: 1.0 / 125.0,
             sensitivity_iso: 100.0,
-        }))
-        .add_plugins(ObjPlugin)
-        .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
-        .add_plugins(RapierDebugRenderPlugin {
-            enabled: false,
-            ..default()
-        })
-        .add_plugins(Sprite3dPlugin)
-        .insert_resource(UserSettings { mouse_sens: 0.25 })
-        .insert_resource(GameResourceHandles::default())
-        .add_event::<CreateTilemapEvent>()
-        .add_event::<SpawnEnemyEvent>()
-        .add_event::<CreateSprite3dEvent>()
-        .add_systems(PreStartup, init_resources)
-        .add_systems(Startup, start)
-        .add_systems(
+        }));
+        app.insert_resource(UserSettings { mouse_sens: 0.25 })
+            .insert_resource(GameResourceHandles::default());
+    }
+
+    // Events
+    {
+        app.add_event::<CreateTilemapEvent>();
+        app.add_event::<SpawnEnemyEvent>();
+        app.add_event::<CreateSprite3dEvent>();
+    }
+
+    // Systems
+    {
+        app.add_systems(PreStartup, init_resources);
+        app.add_systems(Startup, (start, windows::window_start));
+        app.add_systems(
             FixedFirst,
             (
                 create_sprite_listener,
                 create_enemy_listener,
                 create_tilemap_listener,
             ),
-        )
-        .add_systems(Update, (move_player, dice_system))
-        .add_systems(Startup, windows::window_start)
-        .add_systems(Update, (windows::window_update, debug_info))
-        .run();
+        );
+        app.add_systems(Update, (move_player, dice_system));
+        app.add_systems(Update, (windows::window_update, debug_info));
+    }
+
+    app.run();
 }
 
 fn start(
