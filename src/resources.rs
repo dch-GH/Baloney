@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use bevy::{
     prelude::*,
     render::{
@@ -10,8 +12,9 @@ use bevy::{
         texture::*,
     },
 };
+use bevy_sprite3d::Sprite3dParams;
 
-use crate::tilemap::TILE_SIZE;
+use crate::{enemy::EnemyKind, tilemap::TILE_SIZE};
 
 #[derive(Resource, Default, Deref, DerefMut)]
 pub struct CameraParameters(pub PhysicalCameraParameters);
@@ -26,6 +29,8 @@ pub struct GameResourceHandles {
     pub plane: Handle<Mesh>,
     pub dice_mesh: Handle<Mesh>,
     pub render_texture: Handle<Image>,
+    pub font: Handle<Font>,
+    pub enemy_sprites: HashMap<EnemyKind, Handle<Image>>,
 }
 
 pub fn init_resources(
@@ -112,6 +117,12 @@ pub fn init_resources(
     resources.cube = cube_handle;
     resources.plane = plane_handle;
     resources.render_texture = render_texture_handle;
+    resources.font = assets.load("fonts/Minecraftchmc-dBlX.ttf");
+
+    let mut dict: HashMap<EnemyKind, Handle<Image>> = HashMap::new();
+    dict.insert(EnemyKind::Skull, assets.load("enemy_sprites/skull.png"));
+
+    resources.enemy_sprites = dict;
 }
 
 #[derive(Resource, Default)]

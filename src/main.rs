@@ -1,14 +1,18 @@
 #![allow(warnings)]
 
+mod enemy;
 mod mathx;
 mod player;
 mod resources;
+mod sprite_system;
 mod tilemap;
 mod windows;
 
-use bevy_obj::ObjPlugin;
+use bevy_sprite3d::Sprite3dPlugin;
+use enemy::{create_enemy_listener, SpawnEnemyEvent};
 use player::*;
 use resources::*;
+use sprite_system::{create_sprite_listener, CreateSprite3dEvent};
 use tilemap::*;
 
 use bevy::{
@@ -24,9 +28,11 @@ use bevy::{
         render_resource::{SamplerDescriptor, Texture, TextureId},
         texture::{ImageAddressMode, ImageLoaderSettings, ImageSampler, ImageSamplerDescriptor},
     },
-    utils::petgraph::visit::Control,
+    utils::petgraph::{data::Create, visit::Control},
     window::{Cursor, CursorGrabMode},
 };
+
+use bevy_obj::ObjPlugin;
 use bevy_rapier3d::{control, prelude::*};
 
 #[derive(Component)]
@@ -64,16 +70,28 @@ fn main() {
             shutter_speed_s: 1.0 / 125.0,
             sensitivity_iso: 100.0,
         }))
-        .insert_resource(UserSettings { mouse_sens: 0.25 })
-        .insert_resource(GameResourceHandles::default())
         .add_plugins(ObjPlugin)
         .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugins(RapierDebugRenderPlugin {
             enabled: false,
             ..default()
         })
+        .add_plugins(Sprite3dPlugin)
+        .insert_resource(UserSettings { mouse_sens: 0.25 })
+        .insert_resource(GameResourceHandles::default())
+        .add_event::<CreateTilemapEvent>()
+        .add_event::<SpawnEnemyEvent>()
+        .add_event::<CreateSprite3dEvent>()
         .add_systems(PreStartup, init_resources)
         .add_systems(Startup, start)
+        .add_systems(
+            FixedFirst,
+            (
+                create_sprite_listener,
+                create_enemy_listener,
+                create_tilemap_listener,
+            ),
+        )
         .add_systems(Update, (move_player, dice_system))
         .add_systems(Startup, windows::window_start)
         .add_systems(Update, (windows::window_update, debug_info))
@@ -85,9 +103,9 @@ fn start(
     asset_server: Res<AssetServer>,
     resources: Res<GameResourceHandles>,
     cam_parameters: Res<CameraParameters>,
+    mut tilemap_event: EventWriter<CreateTilemapEvent>,
 ) {
-    create_tilemap(&mut commands, &resources);
-
+    tilemap_event.send(CreateTilemapEvent);
     // Create player
     {
         commands
