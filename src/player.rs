@@ -123,9 +123,7 @@ pub fn move_player(
     pl_xform.translation = player_xform.translation + eye_offset * 0.35;
 }
 
-pub fn dice_system(
-    mut query: Query<(&Transform, &bevy_rapier3d::dynamics::Velocity, &mut Dice), With<Dice>>,
-) {
+pub fn dice_system(mut query: Query<(&Transform, &bevy_rapier3d::dynamics::Velocity, &mut Dice)>) {
     if query.is_empty() {
         return;
     }
