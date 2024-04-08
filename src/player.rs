@@ -1,6 +1,8 @@
+use std::{borrow::Borrow, collections::HashSet, thread::panicking};
+
 use bevy::{
     app::AppExit,
-    ecs::{component::Component, event::EventReader, query::QueryData},
+    ecs::{component::Component, event::EventReader, query::QueryData, system::SystemState},
     input::mouse::MouseMotion,
     math::vec3,
     prelude::*,
@@ -8,12 +10,13 @@ use bevy::{
 use bevy_rapier3d::{
     control::KinematicCharacterController,
     dynamics::{AdditionalMassProperties, ExternalImpulse, RigidBody, Sleeping, Velocity},
-    geometry::Collider,
+    geometry::{ActiveEvents, Collider},
     na::Dynamic,
+    pipeline::CollisionEvent,
     rapier::dynamics::BodyPair,
 };
 
-use crate::{GameResourceHandles, LowResCamera, MainCamera, UserSettings};
+use crate::{enemy::Enemy, GameResourceHandles, LowResCamera, MainCamera, UserSettings};
 
 #[derive(Component)]
 pub struct Player {}
@@ -21,6 +24,10 @@ pub struct Player {}
 #[derive(Component)]
 pub struct Dice {
     rolled: bool,
+}
+
+pub fn subscribe_events(mut app: &mut App) {
+    app.add_systems(Update, dice_collision_listener);
 }
 
 pub fn move_player(
@@ -99,7 +106,12 @@ pub fn move_player(
         cam_xform.rotate_y(-2.0 * dt);
     }
 
+    if key.just_pressed(KeyCode::KeyE) {
+        println!("{:?}", player_xform.translation);
+    }
+
     if key.just_pressed(KeyCode::Space) {
+        // Spawn dice
         // println!("{:?}", player_xform.translation);
         let eye_pos = cam_xform.translation + fwd * 1.5;
         commands
@@ -109,6 +121,7 @@ pub fn move_player(
                 transform: Transform::IDENTITY.with_translation(eye_pos),
                 ..default()
             })
+            .insert(ActiveEvents::COLLISION_EVENTS)
             .insert(Dice { rolled: false })
             .insert(RigidBody::Dynamic)
             .insert(Velocity { ..default() })
@@ -127,6 +140,7 @@ pub fn dice_system(mut query: Query<(&Transform, &bevy_rapier3d::dynamics::Veloc
     if query.is_empty() {
         return;
     }
+    let x = World::new();
 
     for (dice_xform, vel, mut dice) in query.iter_mut() {
         if dice.rolled {
@@ -139,6 +153,27 @@ pub fn dice_system(mut query: Query<(&Transform, &bevy_rapier3d::dynamics::Veloc
             //event.send(DiceRolledEvent{})
         }
 
-        println!("{:?}", vel.linvel);
+        // println!("{:?}", vel.linvel);
+    }
+}
+
+fn dice_collision_listener(
+    mut dice: Query<Entity, With<Dice>>,
+    mut enemies: Query<Entity, (With<Enemy>, Without<Dice>)>,
+    mut events: EventReader<CollisionEvent>,
+) {
+    for ev in events.read() {
+        if let CollisionEvent::Started(a, b, flags) = ev {
+            let is_a_or_b = |ent: &Entity, a: &Entity, b: &Entity| ent == a || ent == b;
+
+            let enemy = enemies.iter().find(|ent| is_a_or_b(ent, a, b));
+            let dice = dice.iter().find(|ent| is_a_or_b(ent, a, b));
+
+            if enemy.is_none() || dice.is_none() {
+                continue;
+            }
+
+            println!("dice: {:?} hit enemy: {:?}", dice, enemy);
+        }
     }
 }

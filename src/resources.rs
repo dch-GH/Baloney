@@ -64,7 +64,8 @@ pub fn init_resources(
     let wall = assets.add(StandardMaterial {
         base_color: Color::WHITE,
         base_color_texture: Some(brick_texture_handle.clone()),
-
+        perceptual_roughness: 0.85,
+        metallic: 0.01,
         unlit: false,
         ..default()
     });

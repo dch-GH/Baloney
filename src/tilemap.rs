@@ -1,4 +1,7 @@
-use crate::mathx::*;
+use crate::{
+    enemy::{EnemyKind, SpawnEnemyEvent},
+    mathx::*,
+};
 use bevy::{math::vec3, prelude::*, render::mesh};
 use bevy_rapier3d::prelude::*;
 use tiled::Loader;
@@ -24,6 +27,7 @@ pub struct CreateTilemapEvent;
 
 pub(crate) fn create_tilemap_listener(
     mut events: EventReader<CreateTilemapEvent>,
+    mut enemy_events: EventWriter<SpawnEnemyEvent>,
     mut commands: Commands,
     resources: Res<GameResourceHandles>,
 ) {
@@ -37,6 +41,26 @@ pub(crate) fn create_tilemap_listener(
             Ok(map) => map,
             Err(_) => return,
         };
+
+        let enemy_layer = map
+            .layers()
+            .find(|l| l.name == "Tile_Enemy")
+            .map(|layer| layer.as_object_layer())
+            .unwrap_or_else(|| todo!());
+
+        if let Some(object) = enemy_layer {
+            for obj in object.object_data() {
+                enemy_events.send(SpawnEnemyEvent {
+                    position: vec3(obj.x as f32 / TILE_SIZE, 3.0, obj.y as f32 / TILE_SIZE),
+                    kind: EnemyKind::Skull,
+                });
+                println!("{:?}", obj.name);
+                println!(
+                    "{:?}",
+                    vec3(obj.x as f32 / TILE_SIZE, 3.0, obj.y as f32 / TILE_SIZE)
+                );
+            }
+        }
 
         let layer = match map.layers().next() {
             Some(layer) => layer,
@@ -86,7 +110,7 @@ pub(crate) fn create_tilemap_listener(
                                         ))
                                         .with_rotation(Quat::from_euler(
                                             EulerRot::XYZ,
-                                            degrees_to_radians_f32(180.0),
+                                            crate::mathx::f32::degrees_to_radians(180.0),
                                             0.0,
                                             0.0,
                                         )),

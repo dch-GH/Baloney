@@ -4,7 +4,7 @@ mod enemy;
 mod mathx;
 mod player;
 mod resources;
-mod sprite_system;
+mod sprite;
 mod tilemap;
 mod windows;
 
@@ -12,7 +12,7 @@ use bevy_sprite3d::Sprite3dPlugin;
 use enemy::{create_enemy_listener, SpawnEnemyEvent};
 use player::*;
 use resources::*;
-use sprite_system::{create_sprite_listener, CreateSprite3dEvent};
+use sprite::{create_sprite_listener, CreateSprite3dEvent};
 use tilemap::*;
 
 use bevy::{
@@ -95,6 +95,11 @@ fn main() {
         app.add_event::<CreateSprite3dEvent>();
     }
 
+    // Listeners
+    {
+        player::subscribe_events(&mut app);
+    }
+
     // Systems
     {
         app.add_systems(PreStartup, init_resources);
@@ -107,6 +112,7 @@ fn main() {
                 create_tilemap_listener,
             ),
         );
+        app.add_systems(FixedUpdate, (crate::enemy::enemy_motor));
         app.add_systems(Update, (move_player, dice_system));
         app.add_systems(Update, (windows::window_update, debug_info));
     }
@@ -144,7 +150,8 @@ fn start(
         point_light: PointLight {
             intensity: 20_000.0,
             color: Color::ANTIQUE_WHITE,
-            shadows_enabled: (true),
+            shadows_enabled: (false),
+            range: 32.0,
             ..default()
         },
         ..default()
