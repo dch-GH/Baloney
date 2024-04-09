@@ -2,13 +2,18 @@ use crate::{
     enemy::{EnemyKind, SpawnEnemyEvent},
     mathx::*,
 };
-use bevy::{math::vec3, prelude::*, render::mesh};
+use bevy::{
+    math::{vec2, vec3, I64Vec2},
+    prelude::*,
+    render::mesh,
+};
 use bevy_rapier3d::prelude::*;
 use tiled::Loader;
 
 use crate::GameResourceHandles;
 
 const CHUNK_SIZE: i32 = 8;
+const TILE_SIZE_PIXELS: i32 = 72;
 pub const TILE_SIZE: f32 = 4.0;
 
 enum Tile {
@@ -20,6 +25,13 @@ enum Tile {
 #[derive(Component)]
 pub struct TileMap {
     tiles: Vec<tiled::TileId>,
+}
+
+pub fn pixels_to_world(pix_x: f32, pix_y: f32) -> Vec3 {
+    let conv_x = (pix_x / TILE_SIZE_PIXELS as f32) * TILE_SIZE - TILE_SIZE / 2.0;
+    let conv_y = (pix_y / TILE_SIZE_PIXELS as f32) * TILE_SIZE - TILE_SIZE / 2.0;
+
+    vec3(conv_x, -TILE_SIZE / 2.0, conv_y)
 }
 
 #[derive(Event)]
@@ -50,8 +62,11 @@ pub(crate) fn create_tilemap_listener(
 
         if let Some(object) = enemy_layer {
             for obj in object.object_data() {
+                let converted_pos = pixels_to_world(obj.x, obj.y);
+                println!("{:?}", converted_pos);
+
                 enemy_events.send(SpawnEnemyEvent {
-                    position: vec3(obj.x as f32 / TILE_SIZE, 3.0, obj.y as f32 / TILE_SIZE),
+                    position: converted_pos,
                     kind: EnemyKind::Skull,
                 });
                 println!("{:?}", obj.name);

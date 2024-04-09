@@ -138,9 +138,11 @@ fn start(
             .insert(bevy_rapier3d::control::KinematicCharacterController {
                 apply_impulse_to_dynamic_bodies: true,
                 custom_mass: Some(1.0),
+                filter_flags: QueryFilterFlags::all(),
                 ..default()
             })
             .insert(Player {})
+            .insert(MoveFlags { floating: true })
             .insert(Collider::capsule_y(0.885, 0.25));
     }
 

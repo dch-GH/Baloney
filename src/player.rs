@@ -16,23 +16,33 @@ use bevy_rapier3d::{
     rapier::dynamics::BodyPair,
 };
 
-use crate::{enemy::Enemy, GameResourceHandles, LowResCamera, MainCamera, UserSettings};
+use crate::{enemy::Enemy, mathx, GameResourceHandles, LowResCamera, MainCamera, UserSettings};
 
 #[derive(Component)]
 pub struct Player {}
+
+#[derive(Component)]
+pub struct MoveFlags {
+    pub floating: bool,
+}
 
 #[derive(Component)]
 pub struct Dice {
     rolled: bool,
 }
 
-pub fn subscribe_events(mut app: &mut App) {
-    app.add_systems(Update, dice_collision_listener);
-}
+pub fn subscribe_events(mut app: &mut App) {}
 
 pub fn move_player(
     mut commands: Commands,
-    mut query: Query<(&mut Transform, &mut KinematicCharacterController), With<Player>>,
+    mut query: Query<
+        (
+            &mut Transform,
+            &mut KinematicCharacterController,
+            &mut MoveFlags,
+        ),
+        With<Player>,
+    >,
     mut cam_query: Query<
         &mut Transform,
         (With<LowResCamera>, Without<Player>, Without<MainCamera>),
@@ -55,7 +65,7 @@ pub fn move_player(
     let dt = time.delta_seconds();
     let mv_speed = 10.0;
 
-    let (player_xform, mut controller) = query.single_mut();
+    let (player_xform, mut controller, mut move_flags) = query.single_mut();
     let mut cam_xform = cam_query.single_mut();
     let mut pl_xform = light_query.single_mut();
 
@@ -84,7 +94,10 @@ pub fn move_player(
     velocity += wish_move * mv_speed * dt;
     velocity.x = f32::clamp(velocity.x, -32.0, 32.0);
     velocity.z = f32::clamp(velocity.z, -32.0, 32.0);
-    velocity += Direction3d::NEG_Y * 9.82 * dt;
+
+    if !move_flags.floating {
+        velocity += Direction3d::NEG_Y * 9.82 * dt;
+    }
 
     let eye_offset = Direction3d::Y * 0.7;
     cam_xform.translation = player_xform.translation + eye_offset;
@@ -112,6 +125,8 @@ pub fn move_player(
 
     if key.just_pressed(KeyCode::Space) {
         // Spawn dice
+        let mut inherit_velocity = velocity;
+        inherit_velocity.y = 0.10;
         // println!("{:?}", player_xform.translation);
         let eye_pos = cam_xform.translation + fwd * 1.5;
         commands
@@ -128,8 +143,9 @@ pub fn move_player(
             .insert(Collider::cuboid(0.25, 0.25, 0.25))
             .insert(AdditionalMassProperties::Mass(9.0))
             .insert(ExternalImpulse {
-                impulse: fwd * 0.3,
-                torque_impulse: vec3(0.03, -0.02, 0.04),
+                // impulse: fwd * 0.3,
+                impulse: inherit_velocity * 10.0 + fwd * 0.5,
+                torque_impulse: mathx::vector::random::vec3() * 0.5,
             });
     }
 
@@ -154,26 +170,5 @@ pub fn dice_system(mut query: Query<(&Transform, &bevy_rapier3d::dynamics::Veloc
         }
 
         // println!("{:?}", vel.linvel);
-    }
-}
-
-fn dice_collision_listener(mut commands: Commands, mut events: EventReader<CollisionEvent>) {
-    let mut p = |a: Entity, b: Entity| {
-        commands.add(move |world: &mut World| {
-            let dice_ent = if world.entity(a).contains::<Dice>() {
-                a
-            } else {
-                b
-            };
-
-            let enemy_ent = if dice_ent == a { b } else { a };
-            world.despawn(dice_ent);
-        });
-    };
-
-    for ev in events.read() {
-        if let CollisionEvent::Started(a, b, flags) = ev {
-            p(*a, *b);
-        }
     }
 }

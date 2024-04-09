@@ -53,8 +53,7 @@ pub fn create_enemy_listener(
     }
 
     for ev in spawn_events.read() {
-        // let pos = ev.position;
-        let pos = vec3(6.0, -3.5, 4.0);
+        let pos = ev.position;
 
         let enemy = commands
             .spawn(TransformBundle {
@@ -73,6 +72,7 @@ pub fn create_enemy_listener(
             .insert(Collider::capsule_y(0.885, 0.25))
             .id();
 
+        println!("Spawned lil bro at: {:?}", pos);
         event_bus.send(CreateSprite3dEvent {
             entity: enemy,
             position: pos,
