@@ -1,14 +1,14 @@
 use std::{borrow::Borrow, collections::HashSet, thread::panicking};
 
 use bevy::{
-    app::AppExit,
+    app::{AppExit, FixedMain},
     ecs::{component::Component, event::EventReader, query::QueryData, system::SystemState},
     input::mouse::MouseMotion,
     math::vec3,
     prelude::*,
 };
 use bevy_rapier3d::{
-    control::KinematicCharacterController,
+    control::{self, KinematicCharacterController},
     dynamics::{AdditionalMassProperties, ExternalImpulse, RigidBody, Sleeping, Velocity},
     geometry::{ActiveEvents, Collider},
     na::Dynamic,
@@ -31,7 +31,46 @@ pub struct Dice {
     rolled: bool,
 }
 
-pub fn subscribe_events(mut app: &mut App) {}
+#[derive(Event)]
+pub struct SpawnPlayerEvent;
+
+pub fn subscribe_events(mut app: &mut App) {
+    app.add_event::<SpawnPlayerEvent>();
+    app.add_systems(FixedMain, spawn_player_listener);
+    app.add_systems(Update, (move_player, dice_system));
+}
+
+fn spawn_player_listener(mut commands: Commands, mut events: EventReader<SpawnPlayerEvent>) {
+    for ev in events.read() {
+        println!("aaawhawdjwahjdhjawjdawjhdhawd");
+        commands
+            .spawn(TransformBundle {
+                local: Transform::IDENTITY.with_translation(vec3(4.0, -3.5, 4.0)),
+                global: GlobalTransform::IDENTITY,
+            })
+            .insert(bevy_rapier3d::control::KinematicCharacterController {
+                apply_impulse_to_dynamic_bodies: true,
+                custom_mass: Some(1.0),
+                ..default()
+            })
+            .insert(Player {})
+            .insert(MoveFlags { floating: false })
+            .insert(Collider::capsule_y(0.885, 0.25));
+
+        // RPG light
+        commands.spawn(PointLightBundle {
+            transform: Transform::IDENTITY.with_translation(Direction3d::Y * 64.0),
+            point_light: PointLight {
+                intensity: 20_000.0,
+                color: Color::ANTIQUE_WHITE,
+                shadows_enabled: (false),
+                range: 32.0,
+                ..default()
+            },
+            ..default()
+        });
+    }
+}
 
 pub fn move_player(
     mut commands: Commands,
@@ -62,6 +101,10 @@ pub fn move_player(
     key: Res<ButtonInput<KeyCode>>,
     user_cfg: Res<UserSettings>,
 ) {
+    if query.is_empty() {
+        return;
+    }
+
     let dt = time.delta_seconds();
     let mv_speed = 10.0;
 
@@ -71,6 +114,8 @@ pub fn move_player(
 
     let mut velocity = Vec3::ZERO;
     let mut wish_move = Vec3::ZERO;
+    let mut sprint_mult = 1.0;
+
     let fwd = cam_xform.forward().normalize_or_zero();
     let right = cam_xform.right().normalize_or_zero();
 
@@ -90,8 +135,13 @@ pub fn move_player(
         wish_move += -right;
     }
 
+    if key.pressed(KeyCode::ShiftLeft) {
+        sprint_mult = 2.8;
+    }
+
     wish_move = wish_move.normalize_or_zero();
-    velocity += wish_move * mv_speed * dt;
+    velocity += wish_move * mv_speed * sprint_mult * dt;
+
     velocity.x = f32::clamp(velocity.x, -32.0, 32.0);
     velocity.z = f32::clamp(velocity.z, -32.0, 32.0);
 
@@ -121,6 +171,12 @@ pub fn move_player(
 
     if key.just_pressed(KeyCode::KeyE) {
         println!("{:?}", player_xform.translation);
+    }
+
+    if key.just_pressed(KeyCode::KeyN) {
+        move_flags.floating = true;
+        controller.filter_flags = bevy_rapier3d::pipeline::QueryFilterFlags::all();
+        println!("Noclip.");
     }
 
     if key.just_pressed(KeyCode::Space) {
@@ -156,6 +212,7 @@ pub fn dice_system(mut query: Query<(&Transform, &bevy_rapier3d::dynamics::Veloc
     if query.is_empty() {
         return;
     }
+
     let x = World::new();
 
     for (dice_xform, vel, mut dice) in query.iter_mut() {

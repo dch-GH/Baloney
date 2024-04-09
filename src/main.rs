@@ -88,15 +88,12 @@ fn main() {
             .insert_resource(GameResourceHandles::default());
     }
 
-    // Events
+    // Events + Listeners
     {
         app.add_event::<CreateTilemapEvent>();
         app.add_event::<SpawnEnemyEvent>();
         app.add_event::<CreateSprite3dEvent>();
-    }
 
-    // Listeners
-    {
         player::subscribe_events(&mut app);
     }
 
@@ -113,7 +110,6 @@ fn main() {
             ),
         );
         app.add_systems(FixedUpdate, (crate::enemy::enemy_motor));
-        app.add_systems(Update, (move_player, dice_system));
         app.add_systems(Update, (windows::window_update, debug_info));
     }
 
@@ -126,39 +122,8 @@ fn start(
     resources: Res<GameResourceHandles>,
     cam_parameters: Res<CameraParameters>,
     mut tilemap_event: EventWriter<CreateTilemapEvent>,
+    mut spawn_player_event: EventWriter<SpawnPlayerEvent>,
 ) {
-    tilemap_event.send(CreateTilemapEvent);
-    // Create player
-    {
-        commands
-            .spawn(TransformBundle {
-                local: Transform::IDENTITY.with_translation(vec3(4.0, -3.5, 4.0)),
-                global: GlobalTransform::IDENTITY,
-            })
-            .insert(bevy_rapier3d::control::KinematicCharacterController {
-                apply_impulse_to_dynamic_bodies: true,
-                custom_mass: Some(1.0),
-                filter_flags: QueryFilterFlags::all(),
-                ..default()
-            })
-            .insert(Player {})
-            .insert(MoveFlags { floating: true })
-            .insert(Collider::capsule_y(0.885, 0.25));
-    }
-
-    // RPG light
-    commands.spawn(PointLightBundle {
-        transform: Transform::IDENTITY.with_translation(Direction3d::Y * 64.0),
-        point_light: PointLight {
-            intensity: 20_000.0,
-            color: Color::ANTIQUE_WHITE,
-            shadows_enabled: (false),
-            range: 32.0,
-            ..default()
-        },
-        ..default()
-    });
-
     // Ambient light
     commands.insert_resource(AmbientLight {
         color: Color::ORANGE_RED,
@@ -227,6 +192,9 @@ fn start(
                 ..default()
             });
         });
+
+    tilemap_event.send(CreateTilemapEvent);
+    spawn_player_event.send(SpawnPlayerEvent);
 }
 
 fn debug_info(key: Res<ButtonInput<KeyCode>>, mut physics_debug: ResMut<DebugRenderContext>) {

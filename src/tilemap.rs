@@ -43,10 +43,6 @@ pub(crate) fn create_tilemap_listener(
     mut commands: Commands,
     resources: Res<GameResourceHandles>,
 ) {
-    if events.is_empty() {
-        return;
-    }
-
     for ev in events.read() {
         let mut loader = Loader::new();
         let map = match loader.load_tmx_map("assets/map.tmx") {

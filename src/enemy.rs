@@ -48,10 +48,6 @@ pub fn create_enemy_listener(
     mut spawn_events: EventReader<SpawnEnemyEvent>,
     mut event_bus: EventWriter<CreateSprite3dEvent>,
 ) {
-    if spawn_events.is_empty() {
-        return;
-    }
-
     for ev in spawn_events.read() {
         let pos = ev.position;
 
@@ -69,7 +65,7 @@ pub fn create_enemy_listener(
                 kind: ev.kind.clone(),
             })
             .insert(EnemyMotor { ..default() })
-            .insert(Collider::capsule_y(0.885, 0.25))
+            .insert(Collider::capsule_y(0.6, 1.5))
             .id();
 
         println!("Spawned lil bro at: {:?}", pos);

@@ -13,15 +13,12 @@ pub fn create_sprite_listener(
     mut sprite_params: Sprite3dParams,
     mut events: EventReader<CreateSprite3dEvent>,
 ) {
-    if events.is_empty() {
-        return;
-    }
-
     for ev in events.read() {
         if let Some(mut entity) = commands.get_entity(ev.entity) {
             entity.insert(
                 Sprite3d {
                     image: ev.image.clone(),
+                    pixels_per_metre: 20.0,
                     transform: Transform::IDENTITY.with_translation(ev.position),
                     ..default()
                 }
