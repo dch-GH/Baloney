@@ -157,23 +157,23 @@ pub fn dice_system(mut query: Query<(&Transform, &bevy_rapier3d::dynamics::Veloc
     }
 }
 
-fn dice_collision_listener(
-    mut dice: Query<Entity, With<Dice>>,
-    mut enemies: Query<Entity, (With<Enemy>, Without<Dice>)>,
-    mut events: EventReader<CollisionEvent>,
-) {
+fn dice_collision_listener(mut commands: Commands, mut events: EventReader<CollisionEvent>) {
+    let mut p = |a: Entity, b: Entity| {
+        commands.add(move |world: &mut World| {
+            let dice_ent = if world.entity(a).contains::<Dice>() {
+                a
+            } else {
+                b
+            };
+
+            let enemy_ent = if dice_ent == a { b } else { a };
+            world.despawn(dice_ent);
+        });
+    };
+
     for ev in events.read() {
         if let CollisionEvent::Started(a, b, flags) = ev {
-            let is_a_or_b = |ent: &Entity, a: &Entity, b: &Entity| ent == a || ent == b;
-
-            let enemy = enemies.iter().find(|ent| is_a_or_b(ent, a, b));
-            let dice = dice.iter().find(|ent| is_a_or_b(ent, a, b));
-
-            if enemy.is_none() || dice.is_none() {
-                continue;
-            }
-
-            println!("dice: {:?} hit enemy: {:?}", dice, enemy);
+            p(*a, *b);
         }
     }
 }
