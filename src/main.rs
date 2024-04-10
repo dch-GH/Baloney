@@ -90,25 +90,18 @@ fn main() {
 
     // Events + Listeners
     {
-        app.add_event::<CreateTilemapEvent>();
         app.add_event::<SpawnEnemyEvent>();
         app.add_event::<CreateSprite3dEvent>();
 
         player::subscribe_events(&mut app);
+        TileMap::subscribe_events(&mut app);
     }
 
     // Systems
     {
         app.add_systems(PreStartup, init_resources);
         app.add_systems(Startup, (start, windows::window_start));
-        app.add_systems(
-            FixedFirst,
-            (
-                create_sprite_listener,
-                create_enemy_listener,
-                create_tilemap_listener,
-            ),
-        );
+        app.add_systems(FixedFirst, (create_sprite_listener, create_enemy_listener));
         app.add_systems(FixedUpdate, (crate::enemy::enemy_motor));
         app.add_systems(Update, (windows::window_update, debug_info));
     }
