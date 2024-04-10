@@ -131,6 +131,7 @@ fn start(
                 is_active: true,
                 order: -1,
                 target: RenderTarget::Image(resources.render_texture.clone()),
+                clear_color: ClearColorConfig::Custom(Color::BLACK),
                 ..default()
             },
             projection: Projection::Perspective(PerspectiveProjection {

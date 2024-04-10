@@ -11,6 +11,7 @@ use bevy::{
     utils::tracing::span,
 };
 use bevy_rapier3d::prelude::*;
+use rand::distributions::Standard;
 use tiled::{FiniteTileLayer, Loader, Map};
 
 use crate::GameResourceHandles;
@@ -29,7 +30,7 @@ enum Tile {
     StoneWall,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 enum ZLayer {
     Floor,
     Wall,
@@ -62,18 +63,26 @@ impl TileMap {
     }
 
     fn get_layer<'a>(map: &'a Map, layer_name: &str) -> Option<FiniteTileLayer<'a>> {
-        let tile_layer = match map
-            .layers()
-            .filter(|x| x.name == layer_name)
-            .next()
-            .unwrap()
-            .as_tile_layer()
-        {
-            Some(tiled::TileLayer::Finite(found_layer)) => found_layer,
-            _ => todo!(),
+        let maybe_layer = map.layers().find(|x| x.name == layer_name);
+
+        match maybe_layer {
+            Some(layer) => {
+                if let Some(tiled::TileLayer::Finite(found_layer)) = layer.as_tile_layer() {
+                    // println!(
+                    //     "Found Tiled Layer: {:?} by name {}",
+                    //     found_layer.get_tile_data(0, 0).unwrap(),
+                    //     layer_name
+                    // );
+                    return Some(found_layer);
+                }
+            }
+            // TODO: Fallback layer.
+            None => {
+                error!("Could not find layer with name {}", layer_name);
+            }
         };
 
-        return Some(tile_layer);
+        None
     }
 
     fn process_tile_layer(
@@ -86,17 +95,18 @@ impl TileMap {
 
         let mut event_batch: Vec<SpawnTileFromIdEvent> = Vec::new();
 
-        for x in 0..8 {
-            for y in 0..8 {
+        for x in 0..tiled_layer.width() {
+            for y in 0..tiled_layer.height() {
                 if let Some(t) = tiled_layer.get_tile(x as i32, y as i32) {
                     let tile_id = t.id();
-                    println!("X: {}  Y: {} ID: {}", x, y, tile_id);
                     result_layer.push(tile_id);
 
-                    if tile_id <= 1 {
-                        println!("air");
+                    if tile_id < 1 {
+                        // println!("Layer: {:?}, X: {}  Y: {} ID: Air", z_layer, x, y);
                         continue;
                     }
+
+                    // println!("Layer: {:?}, X: {}  Y: {} ID: {}", z_layer, x, y, tile_id);
 
                     let mut position = Vec3 {
                         x: x as f32 * TILE_SIZE,
@@ -105,9 +115,9 @@ impl TileMap {
                     };
 
                     position.y = match z_layer {
-                        ZLayer::Floor => -TILE_SIZE * 2.5,
-                        ZLayer::Wall => -TILE_SIZE,
-                        ZLayer::Ceiling => -2.0,
+                        ZLayer::Floor => -(TILE_SIZE / 2.0),
+                        ZLayer::Wall => TILE_SIZE / 2.0,
+                        ZLayer::Ceiling => TILE_SIZE * 1.5,
                     };
 
                     event_batch.push(SpawnTileFromIdEvent {
@@ -115,6 +125,9 @@ impl TileMap {
                         position: position,
                         layer: z_layer,
                     });
+                } else {
+                    // println!("Layer: {:?}, X: {}  Y: {} ID: None (Empty)", z_layer, x, y);
+                    continue;
                 }
             }
         }
@@ -148,9 +161,9 @@ impl TileMap {
                 Err(_) => return,
             };
 
-            let floor = TileMap::get_layer(&map, FLOOR_LAYER);
-            let wall = TileMap::get_layer(&map, WALL_LAYER);
-            let ceiling = TileMap::get_layer(&map, CEILING_LAYER);
+            let floor = TileMap::get_layer(&map, FLOOR_LAYER).unwrap();
+            let wall = TileMap::get_layer(&map, WALL_LAYER).unwrap();
+            let ceiling = TileMap::get_layer(&map, CEILING_LAYER).unwrap();
 
             let mut tm = TileMap {
                 floor: Vec::<tiled::TileId>::new(),
@@ -195,83 +208,64 @@ impl TileMap {
         mut events: EventReader<SpawnTileFromIdEvent>,
     ) {
         for ev in events.read() {
-            let x = ev.position.x;
-            let y = ev.position.y;
-            let z = ev.position.z;
+            // let mesh = match ev.layer {
+            //     ZLayer::Floor => resources.plane.clone(),
+            //     ZLayer::Wall => resources.cube.clone(),
+            //     ZLayer::Ceiling => resources.plane.clone(),
+            // };
 
-            let mesh = match ev.layer {
-                ZLayer::Floor => resources.plane.clone(),
-                ZLayer::Wall => resources.cube.clone(),
-                ZLayer::Ceiling => resources.plane.clone(),
-            };
+            // let rotation: Quat = match ev.layer {
+            //     ZLayer::Floor => Quat::default(),
+            //     ZLayer::Wall => Quat::default(),
+            //     ZLayer::Ceiling => Quat::from_euler(
+            //         EulerRot::XYZ,
+            //         crate::mathx::f32::degrees_to_radians(180.0),
+            //         0.0,
+            //         0.0,
+            //     ),
+            // };
 
-            let rotation: Quat = match ev.layer {
-                ZLayer::Floor => Quat::default(),
-                ZLayer::Wall => Quat::default(),
-                ZLayer::Ceiling => Quat::from_euler(
-                    EulerRot::XYZ,
-                    crate::mathx::f32::degrees_to_radians(180.0),
-                    0.0,
-                    0.0,
-                ),
-            };
+            // let collider_size = match ev.layer {
+            //     ZLayer::Floor => vec3(TILE_SIZE / 2.0, 0.1, TILE_SIZE / 2.0),
+            //     ZLayer::Wall => Vec3::splat(TILE_SIZE / 2.0),
+            //     ZLayer::Ceiling => vec3(TILE_SIZE / 2.0, 0.1, TILE_SIZE / 2.0),
+            // };
 
-            let collider_size = match ev.layer {
-                ZLayer::Floor => vec3(TILE_SIZE / 2.0, 0.1, TILE_SIZE / 2.0),
-                ZLayer::Wall => Vec3::splat(TILE_SIZE / 2.0),
-                ZLayer::Ceiling => vec3(TILE_SIZE / 2.0, 0.1, TILE_SIZE / 2.0),
+            let mesh = resources.cube.clone();
+            let rotation = Quat::IDENTITY;
+            let collider_size = Vec3::splat(TILE_SIZE / 2.0);
+
+            let mut spawn_tile = |pos: Vec3, material: Handle<StandardMaterial>| {
+                commands
+                    .spawn(PbrBundle {
+                        mesh: mesh,
+                        material: material,
+                        transform: Transform::IDENTITY
+                            .with_translation(vec3(pos.x, pos.y, pos.z))
+                            .with_rotation(rotation),
+                        ..default()
+                    })
+                    .insert(RigidBody::Fixed)
+                    .insert(Collider::cuboid(
+                        collider_size.x,
+                        collider_size.y,
+                        collider_size.z,
+                    ));
             };
 
             match ev.tile_id {
                 // Air
                 0 => continue,
-                1 => continue,
 
-                // Floor
-                2 => {
-                    commands
-                        .spawn(PbrBundle {
-                            mesh: mesh,
-                            material: resources.floor_material.clone(),
-                            transform: Transform::IDENTITY
-                                .with_translation(vec3(
-                                    x as f32 * TILE_SIZE,
-                                    -TILE_SIZE * 1.5,
-                                    y as f32 * TILE_SIZE,
-                                ))
-                                .with_rotation(rotation),
-                            ..default()
-                        })
-                        .insert(RigidBody::Fixed)
-                        .insert(Collider::cuboid(
-                            collider_size.x,
-                            collider_size.y,
-                            collider_size.z,
-                        ));
-                }
+                // Mossy
+                1 => spawn_tile(ev.position, resources.mossy_cobble.clone()),
 
-                //Wall
-                3 => {
-                    commands
-                        .spawn(PbrBundle {
-                            mesh: resources.cube.clone(),
-                            material: resources.wall_material.clone(),
-                            transform: Transform::IDENTITY
-                                .with_translation(vec3(
-                                    x as f32 * TILE_SIZE,
-                                    -TILE_SIZE,
-                                    y as f32 * TILE_SIZE,
-                                ))
-                                .with_rotation(rotation),
-                            ..default()
-                        })
-                        .insert(RigidBody::Fixed)
-                        .insert(Collider::cuboid(
-                            collider_size.x,
-                            collider_size.y,
-                            collider_size.z,
-                        ));
-                }
+                // Brick
+                2 => spawn_tile(ev.position, resources.brick_material.clone()),
+
+                // Cobble
+                3 => spawn_tile(ev.position, resources.cobble_material.clone()),
+
                 _ => continue,
             };
         }

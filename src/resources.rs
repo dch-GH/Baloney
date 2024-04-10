@@ -21,9 +21,9 @@ pub struct CameraParameters(pub PhysicalCameraParameters);
 
 #[derive(Resource, Default)]
 pub struct GameResourceHandles {
-    pub floor_material: Handle<StandardMaterial>,
-    pub ceiling_material: Handle<StandardMaterial>,
-    pub wall_material: Handle<StandardMaterial>,
+    pub mossy_cobble: Handle<StandardMaterial>,
+    pub cobble_material: Handle<StandardMaterial>,
+    pub brick_material: Handle<StandardMaterial>,
     pub dice_material: Handle<StandardMaterial>,
     pub cube: Handle<Mesh>,
     pub plane: Handle<Mesh>,
@@ -45,7 +45,7 @@ pub fn init_resources(
     let brick_texture_handle: Handle<Image> = assets.load("brick.png");
     let dice_texture_handle: Handle<Image> = assets.load("cardsMedium_tilemap_packed.png");
 
-    let ceiling = assets.add(StandardMaterial {
+    let cobble_material = assets.add(StandardMaterial {
         base_color: Color::WHITE,
         base_color_texture: Some(cobble_texture_handle.clone()),
 
@@ -53,7 +53,7 @@ pub fn init_resources(
         ..default()
     });
 
-    let floor = assets.add(StandardMaterial {
+    let mossy_cobble_material = assets.add(StandardMaterial {
         base_color: Color::WHITE,
         base_color_texture: Some(mossy_cobble_texture_handle.clone()),
 
@@ -61,7 +61,7 @@ pub fn init_resources(
         ..default()
     });
 
-    let wall = assets.add(StandardMaterial {
+    let brick_material = assets.add(StandardMaterial {
         base_color: Color::WHITE,
         base_color_texture: Some(brick_texture_handle.clone()),
         perceptual_roughness: 0.85,
@@ -78,7 +78,7 @@ pub fn init_resources(
     });
 
     let cube_handle = meshes.add(Cuboid {
-        half_size: Vec3::ONE * 2.0,
+        half_size: Vec3::splat(TILE_SIZE / 2.0),
     });
 
     let plane_handle = meshes.add(Plane3d::default().mesh().size(TILE_SIZE, TILE_SIZE));
@@ -110,9 +110,9 @@ pub fn init_resources(
     render_texture.resize(size);
     let render_texture_handle = images.add(render_texture);
 
-    resources.ceiling_material = ceiling;
-    resources.wall_material = wall;
-    resources.floor_material = floor;
+    resources.cobble_material = cobble_material;
+    resources.brick_material = brick_material;
+    resources.mossy_cobble = mossy_cobble_material;
     resources.dice_material = dice_material;
     resources.dice_mesh = dice_mesh;
     resources.cube = cube_handle;

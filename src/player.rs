@@ -22,6 +22,12 @@ use crate::{enemy::Enemy, mathx, GameResourceHandles, LowResCamera, MainCamera, 
 pub struct Player {}
 
 #[derive(Component)]
+pub struct MouseLookEnabled;
+
+#[derive(Component)]
+pub struct Noclip;
+
+#[derive(Component)]
 pub struct MoveFlags {
     pub floating: bool,
 }
@@ -42,10 +48,10 @@ pub fn subscribe_events(mut app: &mut App) {
 
 fn spawn_player_listener(mut commands: Commands, mut events: EventReader<SpawnPlayerEvent>) {
     for ev in events.read() {
-        println!("aaawhawdjwahjdhjawjdawjhdhawd");
+        println!("Spawned Player");
         commands
             .spawn(TransformBundle {
-                local: Transform::IDENTITY.with_translation(vec3(4.0, -3.5, 4.0)),
+                local: Transform::IDENTITY.with_translation(vec3(4.0, 5.0, 4.0)),
                 global: GlobalTransform::IDENTITY,
             })
             .insert(bevy_rapier3d::control::KinematicCharacterController {
@@ -76,9 +82,12 @@ pub fn move_player(
     mut commands: Commands,
     mut query: Query<
         (
+            Entity,
             &mut Transform,
             &mut KinematicCharacterController,
             &mut MoveFlags,
+            Has<MouseLookEnabled>,
+            Has<Noclip>,
         ),
         With<Player>,
     >,
@@ -108,7 +117,15 @@ pub fn move_player(
     let dt = time.delta_seconds();
     let mv_speed = 10.0;
 
-    let (player_xform, mut controller, mut move_flags) = query.single_mut();
+    let (
+        player_entity,
+        player_xform,
+        mut controller,
+        mut move_flags,
+        mouse_look_enabled,
+        has_noclip,
+    ) = query.single_mut();
+
     let mut cam_xform = cam_query.single_mut();
     let mut pl_xform = light_query.single_mut();
 
@@ -145,8 +162,16 @@ pub fn move_player(
     velocity.x = f32::clamp(velocity.x, -32.0, 32.0);
     velocity.z = f32::clamp(velocity.z, -32.0, 32.0);
 
-    if !move_flags.floating {
+    if !has_noclip {
         velocity += Direction3d::NEG_Y * 9.82 * dt;
+    } else {
+        if key.pressed(KeyCode::KeyR) {
+            velocity.y += mv_speed * sprint_mult * dt;
+        }
+
+        if key.pressed(KeyCode::KeyF) {
+            velocity.y -= mv_speed * sprint_mult * dt;
+        }
     }
 
     let eye_offset = Direction3d::Y * 0.7;
@@ -155,6 +180,9 @@ pub fn move_player(
     controller.translation = Some(velocity);
 
     for ev in mouse_motion_events.read() {
+        if mouse_look_enabled {
+            continue;
+        }
         cam_xform.rotation *= Quat::from_euler(
             EulerRot::XYZ,
             0.0,
@@ -174,9 +202,17 @@ pub fn move_player(
     }
 
     if key.just_pressed(KeyCode::KeyN) {
-        move_flags.floating = true;
-        controller.filter_flags = bevy_rapier3d::pipeline::QueryFilterFlags::all();
-        println!("Noclip.");
+        if has_noclip {
+            commands.entity(player_entity).remove::<Noclip>();
+            move_flags.floating = false;
+            controller.filter_flags = bevy_rapier3d::pipeline::QueryFilterFlags::default();
+            println!("Noclip OFF");
+        } else {
+            commands.entity(player_entity).insert(Noclip);
+            move_flags.floating = true;
+            controller.filter_flags = bevy_rapier3d::pipeline::QueryFilterFlags::all();
+            println!("Noclip ON");
+        }
     }
 
     if key.just_pressed(KeyCode::Space) {
