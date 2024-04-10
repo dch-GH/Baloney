@@ -6,6 +6,7 @@ mod player;
 mod resources;
 mod sprite;
 mod tilemap;
+mod utils;
 mod windows;
 
 use bevy_sprite3d::Sprite3dPlugin;

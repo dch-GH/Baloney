@@ -2,7 +2,8 @@ use std::result;
 
 use crate::{
     enemy::{EnemyKind, SpawnEnemyEvent},
-    mathx::*,
+    utils::ez_str,
+    MaterialName,
 };
 use bevy::{
     math::{vec2, vec3, I64Vec2},
@@ -138,6 +139,7 @@ impl TileMap {
     }
 }
 
+// Event listeners
 impl TileMap {
     pub(crate) fn subscribe_events(app: &mut App) {
         app.add_event::<CreateTilemapEvent>();
@@ -196,6 +198,34 @@ impl TileMap {
                     ZLayer::Ceiling,
                     &mut spawn_tile_events,
                 );
+            }
+
+            {
+                let width = floor.width() as f32 * TILE_SIZE / 2.0;
+                let depth = floor.height() as f32 * TILE_SIZE / 2.0;
+
+                let static_ceiling = commands
+                    .spawn(PbrBundle {
+                        mesh: resources.plane.clone(),
+                        material: resources.get_material(MaterialName::RoughStone),
+                        transform: Transform::IDENTITY
+                            .with_translation(vec3(width, TILE_SIZE * 2.0, depth))
+                            .with_scale(vec3(width, 0.1, depth))
+                            .with_rotation(Quat::from_euler(
+                                EulerRot::XYZ,
+                                crate::mathx::f32::degrees_to_radians(180.0),
+                                0.0,
+                                0.0,
+                            )),
+                        ..default()
+                    })
+                    .insert(RigidBody::Fixed)
+                    .insert(Collider::cuboid(
+                        floor.width() as f32 * TILE_SIZE,
+                        0.2,
+                        floor.height() as f32 * TILE_SIZE,
+                    ))
+                    .id();
             }
 
             commands.spawn_empty().insert(tm);
@@ -258,13 +288,16 @@ impl TileMap {
                 0 => continue,
 
                 // Mossy
-                1 => spawn_tile(ev.position, resources.mossy_cobble.clone()),
+                1 => spawn_tile(
+                    ev.position,
+                    resources.get_material(MaterialName::MossyCobble),
+                ),
 
                 // Brick
-                2 => spawn_tile(ev.position, resources.brick_material.clone()),
+                2 => spawn_tile(ev.position, resources.get_material(MaterialName::Brick)),
 
                 // Cobble
-                3 => spawn_tile(ev.position, resources.cobble_material.clone()),
+                3 => spawn_tile(ev.position, resources.get_material(MaterialName::Cobble)),
 
                 _ => continue,
             };

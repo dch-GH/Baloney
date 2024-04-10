@@ -16,7 +16,9 @@ use bevy_rapier3d::{
     rapier::dynamics::BodyPair,
 };
 
-use crate::{enemy::Enemy, mathx, GameResourceHandles, LowResCamera, MainCamera, UserSettings};
+use crate::{
+    enemy::Enemy, mathx, GameResourceHandles, LowResCamera, MainCamera, MaterialName, UserSettings,
+};
 
 #[derive(Component)]
 pub struct Player {}
@@ -224,7 +226,7 @@ pub fn move_player(
         commands
             .spawn(PbrBundle {
                 mesh: resources.dice_mesh.clone(),
-                material: resources.dice_material.clone(),
+                material: resources.get_material(MaterialName::Dice),
                 transform: Transform::IDENTITY.with_translation(eye_pos),
                 ..default()
             })
