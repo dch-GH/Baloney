@@ -2,7 +2,9 @@ use bevy::ecs::{bundle::Bundle, component::Component};
 use bevy::math::primitives::Direction3d;
 use bevy::math::{Quat, Vec3};
 use bevy_rapier3d::control::*;
-use bevy_rapier3d::geometry::Collider;
+use bevy_rapier3d::dynamics::{AdditionalMassProperties, ExternalImpulse, RigidBody, Velocity};
+use bevy_rapier3d::geometry::{ActiveEvents, Collider};
+use bevy_rapier3d::plugin::systems::RigidBodyWritebackComponents;
 
 #[derive(Bundle)]
 pub struct PlayerBundle {
@@ -64,6 +66,35 @@ impl Default for MoveFlags {
 #[derive(Component)]
 pub struct Dice {
     pub rolled: bool,
+}
+
+impl Default for Dice {
+    fn default() -> Self {
+        Self { rolled: false }
+    }
+}
+
+#[derive(Bundle)]
+pub struct DiceBundle {
+    pub dice: Dice,
+    pub rb: RigidBody,
+    pub collider: Collider,
+    pub velocity: Velocity,
+    pub mass: AdditionalMassProperties,
+    pub collision_events: ActiveEvents,
+}
+
+impl Default for DiceBundle {
+    fn default() -> Self {
+        Self {
+            dice: Dice::default(),
+            rb: RigidBody::Dynamic,
+            collider: Collider::cuboid(0.25, 0.25, 0.25),
+            velocity: Velocity::default(),
+            mass: AdditionalMassProperties::Mass(9.0),
+            collision_events: ActiveEvents::COLLISION_EVENTS,
+        }
+    }
 }
 
 #[derive(Component)]

@@ -175,7 +175,7 @@ pub fn move_player(
 pub fn dice_system(
     mut commands: Commands,
     mut query: Query<(&Transform, &bevy_rapier3d::dynamics::Velocity, &mut Dice)>,
-    mut player_query: Query<(&Player, &Eye, &Transform), (With<Player>, Without<Dice>)>,
+    mut player_query: Query<(&mut Player, &Eye, &Transform), (With<Player>, Without<Dice>)>,
     key: Res<ButtonInput<KeyCode>>,
     resources: Res<GameResourceHandles>,
 ) {
@@ -188,7 +188,7 @@ pub fn dice_system(
     // Roll the dice
     if key.just_pressed(KeyCode::Space) && !player.dice_active {
         let mut inherit_velocity = player.velocity;
-        inherit_velocity.y = 0.10;
+        inherit_velocity.y = 0.07;
         // println!("{:?}", player_xform.translation);
         let spawn_pos = eye.position + fwd * 1.5;
         commands
@@ -198,24 +198,16 @@ pub fn dice_system(
                 transform: Transform::IDENTITY.with_translation(spawn_pos),
                 ..default()
             })
-            .insert(ActiveEvents::COLLISION_EVENTS)
-            .insert(Dice { rolled: false })
-            .insert(RigidBody::Dynamic)
-            .insert(Velocity { ..default() })
-            .insert(Collider::cuboid(0.25, 0.25, 0.25))
-            .insert(AdditionalMassProperties::Mass(9.0))
+            .insert(DiceBundle::default())
             .insert(ExternalImpulse {
-                // impulse: fwd * 0.3,
-                impulse: inherit_velocity * 10.0 + fwd * 0.5,
-                torque_impulse: mathx::vector::random::vec3() * 0.5,
+                impulse: inherit_velocity * 8.0 + fwd * 0.5,
+                torque_impulse: mathx::vector::random::vec3() * 0.1,
             });
     }
 
     if query.is_empty() {
         return;
     }
-
-    let x = World::new();
 
     for (dice_xform, vel, mut dice) in query.iter_mut() {
         if dice.rolled {
@@ -224,10 +216,9 @@ pub fn dice_system(
 
         if vel.angvel.length() <= 0.1 || vel.linvel.length() <= 0.1 {
             dice.rolled = true;
+            player.dice_active = true;
             // TODO: something like this
             //event.send(DiceRolledEvent{})
         }
-
-        // println!("{:?}", vel.linvel);
     }
 }
