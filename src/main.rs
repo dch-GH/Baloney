@@ -94,7 +94,7 @@ fn main() {
         app.add_event::<SpawnEnemyEvent>();
         app.add_event::<CreateSprite3dEvent>();
 
-        player::subscribe_events(&mut app);
+        player::events::subscribe_events(&mut app);
         TileMap::subscribe_events(&mut app);
     }
 
@@ -116,7 +116,7 @@ fn start(
     resources: Res<GameResourceHandles>,
     cam_parameters: Res<CameraParameters>,
     mut tilemap_event: EventWriter<CreateTilemapEvent>,
-    mut spawn_player_event: EventWriter<SpawnPlayerEvent>,
+    mut spawn_player_event: EventWriter<player::events::SpawnPlayerEvent>,
 ) {
     // Ambient light
     commands.insert_resource(AmbientLight {
@@ -189,7 +189,7 @@ fn start(
         });
 
     tilemap_event.send(CreateTilemapEvent);
-    spawn_player_event.send(SpawnPlayerEvent);
+    spawn_player_event.send(player::events::SpawnPlayerEvent);
 }
 
 fn debug_info(key: Res<ButtonInput<KeyCode>>, mut physics_debug: ResMut<DebugRenderContext>) {

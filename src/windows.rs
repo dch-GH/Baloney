@@ -6,7 +6,7 @@ use bevy::{
     window::{CursorGrabMode, Window, WindowMode},
 };
 
-use crate::{CursorUnlocked, Player};
+use crate::player::components::*;
 
 pub(crate) fn window_start(mut windows: Query<&mut Window>) {
     let mut window = windows.single_mut();
