@@ -32,6 +32,18 @@ pub(crate) fn spawn_player_listener(
 ) {
     for ev in events.read() {
         println!("Spawned Player");
+        commands.spawn(PointLightBundle {
+            transform: Transform::IDENTITY
+                .with_translation(Vec3::X * 3.0 + Vec3::Z * 16.0 + Vec3::Y * 1.2),
+            point_light: PointLight {
+                intensity: 20_000.0,
+                color: Color::ORANGE_RED,
+                shadows_enabled: (false),
+                range: 32.0,
+                ..PointLight::default()
+            },
+            ..PointLightBundle::default()
+        });
 
         commands
             .spawn(TransformBundle {
