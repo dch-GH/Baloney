@@ -6,7 +6,7 @@ use bevy::{
     window::{CursorGrabMode, Window, WindowMode},
 };
 
-use crate::{MouseLookEnabled, Player};
+use crate::{CursorUnlocked, Player};
 
 pub(crate) fn window_start(mut windows: Query<&mut Window>) {
     let mut window = windows.single_mut();
@@ -30,7 +30,7 @@ pub(crate) fn window_update(
     if key.just_pressed(KeyCode::Tab) {
         if window.cursor.visible {
             window.cursor.grab_mode = CursorGrabMode::Confined;
-            commands.entity(player).remove::<MouseLookEnabled>();
+            commands.entity(player).remove::<CursorUnlocked>();
         } else {
             window.cursor.grab_mode = CursorGrabMode::None;
             let cursor_start = Some(vec2(
@@ -38,7 +38,7 @@ pub(crate) fn window_update(
                 window.resolution.height() / 2.0,
             ));
             window.set_cursor_position(cursor_start);
-            commands.entity(player).insert(MouseLookEnabled);
+            commands.entity(player).insert(CursorUnlocked);
         }
 
         window.cursor.visible = !window.cursor.visible;

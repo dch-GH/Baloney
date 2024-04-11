@@ -85,7 +85,7 @@ fn main() {
             shutter_speed_s: 1.0 / 125.0,
             sensitivity_iso: 100.0,
         }));
-        app.insert_resource(UserSettings { mouse_sens: 0.25 })
+        app.insert_resource(UserSettings { mouse_sens: 0.005 })
             .insert_resource(GameResourceHandles::default());
     }
 
@@ -136,7 +136,7 @@ fn start(
                 ..default()
             },
             projection: Projection::Perspective(PerspectiveProjection {
-                fov: 90.0,
+                fov: mathx::f32::degrees_to_radians(90.0),
                 ..default()
             }),
             exposure: Exposure::from_physical_camera(**cam_parameters),

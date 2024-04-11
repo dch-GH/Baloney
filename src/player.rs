@@ -1,12 +1,7 @@
-use std::{borrow::Borrow, collections::HashSet, thread::panicking};
+use std::{borrow::Borrow, collections::HashSet, ops::Mul, thread::panicking};
 
-use bevy::{
-    app::{AppExit, FixedMain},
-    ecs::{component::Component, event::EventReader, query::QueryData, system::SystemState},
-    input::mouse::MouseMotion,
-    math::vec3,
-    prelude::*,
-};
+use bevy::{app::FixedMain, input::mouse::MouseMotion, math::*, prelude::*};
+
 use bevy_rapier3d::{
     control::{self, KinematicCharacterController},
     dynamics::{AdditionalMassProperties, ExternalImpulse, RigidBody, Sleeping, Velocity},
@@ -21,10 +16,76 @@ use crate::{
 };
 
 #[derive(Component)]
-pub struct Player {}
+pub struct Player;
 
 #[derive(Component)]
-pub struct MouseLookEnabled;
+pub struct Eye {
+    pub view: Quat,
+    pub pitch: f32,
+    pub yaw: f32,
+}
+
+impl Eye {
+    /// Get the unit Vec3or in the local `X` direction.
+    #[inline]
+    pub fn local_x(&self) -> Direction3d {
+        // Direction3d::new(x) panics if x is of invalid length, but quat * unit Vec3or is length 1
+        Direction3d::new(self.view * Vec3::X).unwrap()
+    }
+
+    /// Equivalent to [`-local_x()`][Transform::local_x()]
+    #[inline]
+    pub fn left(&self) -> Direction3d {
+        -self.local_x()
+    }
+
+    /// Equivalent to [`local_x()`][Transform::local_x()]
+    #[inline]
+    pub fn right(&self) -> Direction3d {
+        self.local_x()
+    }
+
+    /// Get the unit Vec3or in the local `Y` direction.
+    #[inline]
+    pub fn local_y(&self) -> Direction3d {
+        // Direction3d::new(x) panics if x is of invalid length, but quat * unit Vec3or is length 1
+        Direction3d::new(self.view * Vec3::Y).unwrap()
+    }
+
+    /// Equivalent to [`local_y()`][Transform::local_y]
+    #[inline]
+    pub fn up(&self) -> Direction3d {
+        self.local_y()
+    }
+
+    /// Equivalent to [`-local_y()`][Transform::local_y]
+    #[inline]
+    pub fn down(&self) -> Direction3d {
+        -self.local_y()
+    }
+
+    /// Get the unit Vec3or in the local `Z` direction.
+    #[inline]
+    pub fn local_z(&self) -> Direction3d {
+        // Direction3d::new(x) panics if x is of invalid length, but quat * unit Vec3or is length 1
+        Direction3d::new(self.view * Vec3::Z).unwrap()
+    }
+
+    /// Equivalent to [`-local_z()`][Transform::local_z]
+    #[inline]
+    pub fn forward(&self) -> Direction3d {
+        -self.local_z()
+    }
+
+    /// Equivalent to [`local_z()`][Transform::local_z]
+    #[inline]
+    pub fn back(&self) -> Direction3d {
+        self.local_z()
+    }
+}
+
+#[derive(Component)]
+pub struct CursorUnlocked;
 
 #[derive(Component)]
 pub struct Noclip;
@@ -34,9 +95,44 @@ pub struct MoveFlags {
     pub floating: bool,
 }
 
+impl Default for MoveFlags {
+    fn default() -> Self {
+        Self { floating: false }
+    }
+}
+
 #[derive(Component)]
 pub struct Dice {
     rolled: bool,
+}
+
+#[derive(Bundle)]
+pub struct PlayerBundle {
+    pub player: Player,
+    pub eye: Eye,
+    pub move_flags: MoveFlags,
+    pub controller: bevy_rapier3d::control::KinematicCharacterController,
+    pub collider: Collider,
+}
+
+impl Default for PlayerBundle {
+    fn default() -> Self {
+        Self {
+            player: Player,
+            eye: Eye {
+                view: Quat::IDENTITY,
+                pitch: 0.0,
+                yaw: 0.0,
+            },
+            move_flags: MoveFlags::default(),
+            controller: bevy_rapier3d::control::KinematicCharacterController {
+                apply_impulse_to_dynamic_bodies: true,
+                custom_mass: Some(1.0),
+                ..default()
+            },
+            collider: Collider::capsule_y(0.885, 0.25),
+        }
+    }
 }
 
 #[derive(Event)]
@@ -56,14 +152,7 @@ fn spawn_player_listener(mut commands: Commands, mut events: EventReader<SpawnPl
                 local: Transform::IDENTITY.with_translation(vec3(4.0, 5.0, 4.0)),
                 global: GlobalTransform::IDENTITY,
             })
-            .insert(bevy_rapier3d::control::KinematicCharacterController {
-                apply_impulse_to_dynamic_bodies: true,
-                custom_mass: Some(1.0),
-                ..default()
-            })
-            .insert(Player {})
-            .insert(MoveFlags { floating: false })
-            .insert(Collider::capsule_y(0.885, 0.25));
+            .insert(PlayerBundle { ..default() });
 
         // RPG light
         commands.spawn(PointLightBundle {
@@ -85,10 +174,11 @@ pub fn move_player(
     mut query: Query<
         (
             Entity,
+            &mut Eye,
             &mut Transform,
             &mut KinematicCharacterController,
             &mut MoveFlags,
-            Has<MouseLookEnabled>,
+            Has<CursorUnlocked>,
             Has<Noclip>,
         ),
         With<Player>,
@@ -111,6 +201,7 @@ pub fn move_player(
     time: Res<Time>,
     key: Res<ButtonInput<KeyCode>>,
     user_cfg: Res<UserSettings>,
+    mut gizmos: Gizmos,
 ) {
     if query.is_empty() {
         return;
@@ -121,10 +212,11 @@ pub fn move_player(
 
     let (
         player_entity,
+        mut eye,
         player_xform,
         mut controller,
         mut move_flags,
-        mouse_look_enabled,
+        cursor_unlocked,
         has_noclip,
     ) = query.single_mut();
 
@@ -135,34 +227,36 @@ pub fn move_player(
     let mut wish_move = Vec3::ZERO;
     let mut sprint_mult = 1.0;
 
-    let fwd = cam_xform.forward().normalize_or_zero();
-    let right = cam_xform.right().normalize_or_zero();
+    let up = eye.up();
+    let fwd = eye.forward();
+    let right = eye.right();
 
-    if key.pressed(KeyCode::KeyW) {
-        wish_move += fwd;
-    }
+    {
+        let fixed_fwd = vec3(fwd.x, 0.0, fwd.z);
 
-    if key.pressed(KeyCode::KeyS) {
-        wish_move += -fwd;
-    }
+        if key.pressed(KeyCode::KeyW) {
+            wish_move += fixed_fwd;
+        }
 
-    if key.pressed(KeyCode::KeyD) {
-        wish_move += right;
-    }
+        if key.pressed(KeyCode::KeyS) {
+            wish_move += -fixed_fwd;
+        }
 
-    if key.pressed(KeyCode::KeyA) {
-        wish_move += -right;
-    }
+        if key.pressed(KeyCode::KeyD) {
+            wish_move += right.xyz();
+        }
 
-    if key.pressed(KeyCode::ShiftLeft) {
-        sprint_mult = 2.8;
+        if key.pressed(KeyCode::KeyA) {
+            wish_move += -right.xyz();
+        }
+
+        if key.pressed(KeyCode::ShiftLeft) {
+            sprint_mult = 2.8;
+        }
     }
 
     wish_move = wish_move.normalize_or_zero();
     velocity += wish_move * mv_speed * sprint_mult * dt;
-
-    velocity.x = f32::clamp(velocity.x, -32.0, 32.0);
-    velocity.z = f32::clamp(velocity.z, -32.0, 32.0);
 
     if !has_noclip {
         velocity += Direction3d::NEG_Y * 9.82 * dt;
@@ -178,26 +272,31 @@ pub fn move_player(
 
     let eye_offset = Direction3d::Y * 0.7;
     cam_xform.translation = player_xform.translation + eye_offset;
-
     controller.translation = Some(velocity);
 
+    let mut mouse_delta = Vec2::ZERO;
     for ev in mouse_motion_events.read() {
-        if mouse_look_enabled {
+        if cursor_unlocked {
             continue;
         }
-        cam_xform.rotation *= Quat::from_euler(
-            EulerRot::XYZ,
-            0.0,
-            -ev.delta.x * user_cfg.mouse_sens * dt,
-            0.0,
+
+        mouse_delta = ev.delta * user_cfg.mouse_sens;
+
+        eye.pitch -= mouse_delta.y;
+        eye.yaw -= mouse_delta.x;
+
+        eye.pitch = mathx::f32::degrees_to_radians(
+            mathx::f32::radians_to_degrees(eye.pitch).clamp(-80.0, 80.0),
         );
+
+        eye.view =
+            Quat::from_axis_angle(Vec3::Y, eye.yaw) * Quat::from_axis_angle(Vec3::X, eye.pitch);
     }
 
-    if key.pressed(KeyCode::ArrowLeft) {
-        cam_xform.rotate_y(2.0 * dt);
-    } else if key.pressed(KeyCode::ArrowRight) {
-        cam_xform.rotate_y(-2.0 * dt);
-    }
+    cam_xform.rotation = eye.view;
+
+    let start = cam_xform.translation - up * 1.5;
+    gizmos.arrow(start, start + fwd * 5.0, Color::YELLOW);
 
     if key.just_pressed(KeyCode::KeyE) {
         println!("{:?}", player_xform.translation);
