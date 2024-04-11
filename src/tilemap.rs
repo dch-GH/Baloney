@@ -23,7 +23,7 @@ const CEILING_LAYER: &str = "Ceiling";
 
 const CHUNK_SIZE: i32 = 8;
 const TILE_SIZE_PIXELS: i32 = 16;
-pub const TILE_SIZE: f32 = 3.0;
+pub const TILE_SIZE: f32 = 4.0;
 
 enum Tile {
     Air,
@@ -141,7 +141,7 @@ impl TileMap {
 
 // Event listeners
 impl TileMap {
-    pub(crate) fn subscribe_events(app: &mut App) {
+    pub(crate) fn init(app: &mut App) {
         app.add_event::<CreateTilemapEvent>();
         app.add_event::<SpawnTileFromIdEvent>();
 

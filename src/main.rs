@@ -94,8 +94,8 @@ fn main() {
         app.add_event::<SpawnEnemyEvent>();
         app.add_event::<CreateSprite3dEvent>();
 
-        player::events::subscribe_events(&mut app);
-        TileMap::subscribe_events(&mut app);
+        player::init(&mut app);
+        TileMap::init(&mut app);
     }
 
     // Systems

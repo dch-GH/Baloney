@@ -47,6 +47,9 @@ impl Default for Player {
 }
 
 #[derive(Component)]
+pub struct PlayerLight;
+
+#[derive(Component)]
 pub struct CursorUnlocked;
 
 #[derive(Component)]
@@ -96,6 +99,9 @@ impl Default for DiceBundle {
         }
     }
 }
+
+#[derive(Component)]
+pub struct DiceCamera;
 
 #[derive(Component)]
 pub struct Eye {

@@ -40,7 +40,7 @@ pub fn move_player(
     mut light_query: Query<
         &mut Transform,
         (
-            With<PointLight>,
+            With<PlayerLight>,
             Without<Player>,
             Without<MainCamera>,
             Without<LowResCamera>,
@@ -168,8 +168,25 @@ pub fn move_player(
             println!("Noclip ON");
         }
     }
+}
 
-    pl_xform.translation = eye.position;
+pub(crate) fn move_light(
+    mut player_query: Query<&Transform, With<Player>>,
+    mut light_query: Query<&mut Transform, (With<PlayerLight>, Without<Player>)>,
+    mut time: Res<Time>,
+) {
+    if player_query.is_empty() || light_query.is_empty() {
+        return;
+    }
+
+    let player = player_query.single();
+    let mut light = light_query.single_mut();
+
+    let dt = time.delta_seconds();
+
+    let target_pos = player.translation + Vec3::Y * 0.5;
+
+    light.translation = Vec3::lerp(light.translation, target_pos, dt * 5.0);
 }
 
 pub fn dice_system(
