@@ -1,5 +1,6 @@
 #![allow(warnings)]
 
+mod camera;
 mod enemy;
 mod mathx;
 mod player;
@@ -10,6 +11,7 @@ mod utils;
 mod windows;
 
 use bevy_sprite3d::Sprite3dPlugin;
+use camera::CameraState;
 use enemy::{create_enemy_listener, SpawnEnemyEvent};
 use player::*;
 use resources::*;
@@ -80,6 +82,7 @@ fn main() {
 
     // Resources
     {
+        app.insert_resource(CameraState::default());
         app.insert_resource(CameraParameters(PhysicalCameraParameters {
             aperture_f_stops: 1.0,
             shutter_speed_s: 1.0 / 125.0,
@@ -96,6 +99,7 @@ fn main() {
 
         player::init(&mut app);
         TileMap::init(&mut app);
+        camera::init(&mut app);
     }
 
     // Systems

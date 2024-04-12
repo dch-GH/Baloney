@@ -90,7 +90,6 @@ pub fn enemy_motor(
     mut gizmos: Gizmos,
 ) {
     let dt = time.delta_seconds();
-    let elapsed = time.elapsed_seconds();
 
     for (xform, mut motor, mut controller) in query.iter_mut() {
         if motor.time_since_chose_direction >= 3.0 {

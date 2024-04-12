@@ -13,7 +13,9 @@ use bevy_rapier3d::{
 };
 
 use crate::{
-    enemy::Enemy, mathx, GameResourceHandles, LowResCamera, MainCamera, MaterialName, UserSettings,
+    camera::{CameraSceneParams, CameraState},
+    enemy::Enemy,
+    mathx, GameResourceHandles, LowResCamera, MainCamera, MaterialName, UserSettings,
 };
 
 use crate::player::components::*;
@@ -52,6 +54,7 @@ pub fn move_player(
     key: Res<ButtonInput<KeyCode>>,
     user_cfg: Res<UserSettings>,
     mut gizmos: Gizmos,
+    camera_state: Res<CameraState>,
 ) {
     if query.is_empty() {
         return;
@@ -123,33 +126,41 @@ pub fn move_player(
 
     let eye_offset = Direction3d::Y * 0.7;
     eye.position = player_xform.translation + eye_offset;
-    cam_xform.translation = eye.position;
-    player.velocity = velocity;
-    controller.translation = Some(velocity);
 
-    let mut mouse_delta = Vec2::ZERO;
-    for ev in mouse_motion_events.read() {
-        if cursor_unlocked {
-            continue;
-        }
-
-        mouse_delta = ev.delta * user_cfg.mouse_sens;
-
-        eye.pitch -= mouse_delta.y;
-        eye.yaw -= mouse_delta.x;
-
-        eye.pitch = mathx::f32::degrees_to_radians(
-            mathx::f32::radians_to_degrees(eye.pitch).clamp(-80.0, 80.0),
-        );
-
-        eye.view =
-            Quat::from_axis_angle(Vec3::Y, eye.yaw) * Quat::from_axis_angle(Vec3::X, eye.pitch);
+    if camera_state.scene_params.is_none() {
+        cam_xform.translation = eye.position;
     }
 
-    cam_xform.rotation = eye.view;
+    if !player.dice_active {
+        player.velocity = velocity;
+        controller.translation = Some(velocity);
+    }
 
-    let start = cam_xform.translation - up * 1.5;
-    gizmos.arrow(start, start + fwd * 5.0, Color::YELLOW);
+    if camera_state.scene_params.is_none() {
+        let mut mouse_delta = Vec2::ZERO;
+        for ev in mouse_motion_events.read() {
+            if cursor_unlocked {
+                continue;
+            }
+
+            mouse_delta = ev.delta * user_cfg.mouse_sens;
+
+            eye.pitch -= mouse_delta.y;
+            eye.yaw -= mouse_delta.x;
+
+            eye.pitch = mathx::f32::degrees_to_radians(
+                mathx::f32::radians_to_degrees(eye.pitch).clamp(-80.0, 80.0),
+            );
+
+            eye.view =
+                Quat::from_axis_angle(Vec3::Y, eye.yaw) * Quat::from_axis_angle(Vec3::X, eye.pitch);
+        }
+
+        cam_xform.rotation = eye.view;
+    }
+
+    // let start = cam_xform.translation - up * 1.5;
+    // gizmos.arrow(start, start + fwd * 5.0, Color::YELLOW);
 
     if key.just_pressed(KeyCode::KeyE) {
         println!("{:?}", player_xform.translation);
@@ -193,15 +204,19 @@ pub fn dice_system(
     mut commands: Commands,
     mut query: Query<(&Transform, &bevy_rapier3d::dynamics::Velocity, &mut Dice)>,
     mut player_query: Query<(&mut Player, &Eye, &Transform), (With<Player>, Without<Dice>)>,
+    mut camera_query: Query<(&mut Transform), (With<LowResCamera>, Without<Player>, Without<Dice>)>,
     key: Res<ButtonInput<KeyCode>>,
     resources: Res<GameResourceHandles>,
+    mut camera_state: ResMut<CameraState>,
 ) {
     if player_query.is_empty() {
         return;
     }
 
     let (mut player, eye, player_xform) = player_query.single_mut();
+    let mut cam_xform = camera_query.single_mut();
     let fwd = eye.forward();
+
     // Roll the dice
     if key.just_pressed(KeyCode::Space) && !player.dice_active {
         let mut inherit_velocity = player.velocity;
@@ -220,6 +235,7 @@ pub fn dice_system(
                 impulse: inherit_velocity * 8.0 + fwd * 0.5,
                 torque_impulse: mathx::vector::random::vec3() * 0.1,
             });
+        player.dice_active = true;
     }
 
     if query.is_empty() {
@@ -233,9 +249,31 @@ pub fn dice_system(
 
         if vel.angvel.length() <= 0.1 || vel.linvel.length() <= 0.1 {
             dice.rolled = true;
-            player.dice_active = true;
-            // TODO: something like this
-            //event.send(DiceRolledEvent{})
+
+            cam_xform.translation =
+                dice_xform.translation + Vec3::Y * 0.9 + Vec3::X * 0.8 + Vec3::Z * 0.8;
+
+            let sl_pitch = mathx::f32::degrees_to_radians(-90.0);
+            commands.spawn(SpotLightBundle {
+                spot_light: SpotLight {
+                    color: Color::hex("#e6bfaa").unwrap(),
+                    intensity: 150_000.0,
+                    shadows_enabled: true,
+                    ..default()
+                },
+                transform: Transform::IDENTITY
+                    .with_translation(dice_xform.translation + Vec3::Y * 1.4)
+                    .with_rotation(Quat::from_euler(EulerRot::XYZ, sl_pitch, 0.0, 0.0)),
+                ..default()
+            });
+
+            camera_state.scene_params = Some(CameraSceneParams {
+                target_position: dice_xform.translation,
+                pos_offset: Vec3::Y * 1.2,
+                duration: 2.0,
+            });
+
+            player.dice_active = false;
         }
     }
 }
