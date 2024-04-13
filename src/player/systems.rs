@@ -11,6 +11,7 @@ use bevy_rapier3d::{
     pipeline::CollisionEvent,
     rapier::dynamics::BodyPair,
 };
+use rand::Rng;
 
 use crate::{
     camera::{CameraSceneParams, CameraState},
@@ -208,10 +209,14 @@ pub fn dice_system(
     key: Res<ButtonInput<KeyCode>>,
     resources: Res<GameResourceHandles>,
     mut camera_state: ResMut<CameraState>,
+    time: Res<Time>,
 ) {
     if player_query.is_empty() {
         return;
     }
+
+    let dt = time.delta_seconds();
+    let mut rng = rand::thread_rng();
 
     let (mut player, eye, player_xform) = player_query.single_mut();
     let mut cam_xform = camera_query.single_mut();
@@ -221,19 +226,20 @@ pub fn dice_system(
     if key.just_pressed(KeyCode::Space) && !player.dice_active {
         let mut inherit_velocity = player.velocity;
         inherit_velocity.y = 0.07;
-        // println!("{:?}", player_xform.translation);
         let spawn_pos = eye.position + fwd * 1.5;
         commands
             .spawn(PbrBundle {
                 mesh: resources.dice_mesh.clone(),
                 material: resources.get_material(MaterialName::Dice),
-                transform: Transform::IDENTITY.with_translation(spawn_pos),
+                transform: Transform::IDENTITY
+                    .with_translation(spawn_pos)
+                    .with_rotation(mathx::random::quat()),
                 ..default()
             })
             .insert(DiceBundle::default())
             .insert(ExternalImpulse {
-                impulse: inherit_velocity * 8.0 + fwd * 0.5,
-                torque_impulse: mathx::vector::random::vec3() * 0.1,
+                impulse: inherit_velocity * rng.gen_range(0.5..6.5) + fwd * 0.5,
+                torque_impulse: mathx::random::vec3() * rng.gen_range(0.1..0.3),
             });
         player.dice_active = true;
     }
@@ -242,13 +248,55 @@ pub fn dice_system(
         return;
     }
 
+    let mut get_dice_result = |xform: &Transform| -> i32 {
+        let dot_up = xform.up().dot(Vec3::Y);
+        let dot_down = xform.down().dot(Vec3::Y);
+        let dot_right = xform.right().dot(Vec3::Y);
+        let dot_left = xform.left().dot(Vec3::Y);
+        let dot_forward = xform.forward().dot(Vec3::Y);
+        let dot_backward = xform.back().dot(Vec3::Y);
+
+        if dot_up >= 0.5 {
+            return 1;
+        }
+
+        if dot_down >= 0.5 {
+            return 6;
+        }
+
+        if dot_right >= 0.5 {
+            return 5;
+        }
+
+        if dot_left >= 0.5 {
+            return 2;
+        }
+
+        if dot_forward >= 0.5 {
+            return 3;
+        }
+
+        if dot_backward >= 0.5 {
+            return 4;
+        }
+
+        return 0;
+    };
+
     for (dice_xform, vel, mut dice) in query.iter_mut() {
         if dice.rolled {
             continue;
         }
 
         if vel.angvel.length() <= 0.1 || vel.linvel.length() <= 0.1 {
+            dice.since_landed += dt;
+        }
+
+        if dice.since_landed >= 0.2 {
             dice.rolled = true;
+
+            let result = get_dice_result(&dice_xform);
+            println!("You rolled a {:?}", result);
 
             cam_xform.translation =
                 dice_xform.translation + Vec3::Y * 0.9 + Vec3::X * 0.8 + Vec3::Z * 0.8;

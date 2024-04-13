@@ -98,8 +98,8 @@ pub fn init_resources(
 
     {
         let size = Extent3d {
-            width: 160 * 2,
-            height: 120 * 2,
+            width: 160 * 3,
+            height: 120 * 3,
             ..default()
         };
 

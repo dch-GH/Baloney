@@ -93,7 +93,7 @@ pub fn enemy_motor(
 
     for (xform, mut motor, mut controller) in query.iter_mut() {
         if motor.time_since_chose_direction >= 3.0 {
-            let mut dir = crate::mathx::vector::random::vec3();
+            let mut dir = crate::mathx::random::vec3();
             dir.y = xform.translation.y;
 
             motor.move_dir = dir * 3.0;

@@ -24,28 +24,36 @@ pub mod f64 {
     }
 }
 
-pub mod vector {
-    pub mod random {
-        use bevy::math::{Vec2, Vec3};
-        use rand::prelude::*;
+pub mod random {
+    use bevy::math::{EulerRot, Quat, Vec2, Vec3};
+    use rand::prelude::*;
 
-        pub fn vec2() -> Vec2 {
-            let mut rng = rand::thread_rng();
+    pub fn vec2() -> Vec2 {
+        let mut rng = rand::thread_rng();
 
-            let ran_x: f32 = rng.gen_range(-1.0..1.0);
-            let ran_y: f32 = rng.gen_range(-1.0..1.0);
+        let ran_x: f32 = rng.gen_range(-1.0..1.0);
+        let ran_y: f32 = rng.gen_range(-1.0..1.0);
 
-            return bevy::math::vec2(ran_x, ran_y);
-        }
+        return bevy::math::vec2(ran_x, ran_y);
+    }
 
-        pub fn vec3() -> Vec3 {
-            let mut rng = rand::thread_rng();
+    pub fn vec3() -> Vec3 {
+        let mut rng = rand::thread_rng();
 
-            let ran_x: f32 = rng.gen_range(-1.0..1.0);
-            let ran_y: f32 = rng.gen_range(-1.0..1.0);
-            let ran_z: f32 = rng.gen_range(-1.0..1.0);
+        let ran_x: f32 = rng.gen_range(-1.0..1.0);
+        let ran_y: f32 = rng.gen_range(-1.0..1.0);
+        let ran_z: f32 = rng.gen_range(-1.0..1.0);
 
-            return bevy::math::vec3(ran_x, ran_y, ran_z);
-        }
+        return bevy::math::vec3(ran_x, ran_y, ran_z);
+    }
+
+    pub fn quat() -> Quat {
+        let mut rng = rand::thread_rng();
+
+        let ran_x: f32 = rng.gen_range(-1.0..1.0);
+        let ran_y: f32 = rng.gen_range(-1.0..1.0);
+        let ran_z: f32 = rng.gen_range(-1.0..1.0);
+
+        return Quat::from_euler(EulerRot::XYZ, ran_x, ran_y, ran_z);
     }
 }

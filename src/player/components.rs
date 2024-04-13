@@ -69,11 +69,15 @@ impl Default for MoveFlags {
 #[derive(Component)]
 pub struct Dice {
     pub rolled: bool,
+    pub since_landed: f32,
 }
 
 impl Default for Dice {
     fn default() -> Self {
-        Self { rolled: false }
+        Self {
+            rolled: false,
+            since_landed: 0.0,
+        }
     }
 }
 
