@@ -12,11 +12,11 @@ mod utils;
 mod windows;
 
 use bevy_sprite3d::Sprite3dPlugin;
-use camera::CameraState;
-use enemy::{create_enemy_listener, SpawnEnemyEvent};
+use camera::{CameraState, LowResCamera, MainCamera};
+use enemy::SpawnEnemyEvent;
 use player::*;
 use resources::*;
-use sprite::{create_sprite_listener, CreateSprite3dEvent};
+use sprite::CreateSprite3dEvent;
 use tilemap::*;
 use ui::*;
 
@@ -39,12 +39,6 @@ use bevy::{
 
 use bevy_obj::ObjPlugin;
 use bevy_rapier3d::{control, prelude::*};
-
-#[derive(Component)]
-pub struct LowResCamera;
-
-#[derive(Component)]
-pub struct MainCamera;
 
 fn main() {
     let mut app = App::new();
@@ -98,24 +92,21 @@ fn main() {
     }
 
     // Events + Listeners
-    {
-        app.add_event::<SpawnEnemyEvent>();
-        app.add_event::<CreateSprite3dEvent>();
+    app.add_event::<SpawnEnemyEvent>();
+    app.add_event::<CreateSprite3dEvent>();
 
-        ui::init(&mut app);
-        player::init(&mut app);
-        tilemap::init(&mut app);
-        camera::init(&mut app);
-    }
+    resources::init(&mut app);
+    windows::init(&mut app);
+    ui::init(&mut app);
+    player::init(&mut app);
+    tilemap::init(&mut app);
+    camera::init(&mut app);
+    enemy::init(&mut app);
+    sprite::init(&mut app);
 
     // Systems
-    {
-        app.add_systems(PreStartup, init_resources);
-        app.add_systems(Startup, (start, windows::window_start));
-        app.add_systems(FixedFirst, (create_sprite_listener, create_enemy_listener));
-        app.add_systems(FixedUpdate, (crate::enemy::enemy_motor));
-        app.add_systems(Update, (windows::window_update, debug_info));
-    }
+    app.add_systems(Startup, start);
+    app.add_systems(Update, debug_info);
 
     app.run();
 }

@@ -9,7 +9,7 @@ use bevy::app::Update;
 use self::events::*;
 use self::systems::*;
 
-pub fn init(mut app: &mut App) {
+pub(crate) fn init(mut app: &mut App) {
     app.add_event::<SpawnPlayerEvent>();
     app.add_event::<DiceRollEvent>();
 

@@ -42,7 +42,12 @@ pub struct SpawnEnemyEvent {
     pub kind: EnemyKind,
 }
 
-pub fn create_enemy_listener(
+pub(crate) fn init(mut app: &mut App) {
+    app.add_systems(FixedFirst, create_enemy_listener);
+    app.add_systems(FixedUpdate, enemy_motor);
+}
+
+fn create_enemy_listener(
     mut commands: Commands,
     resources: Res<GameResourceHandles>,
     mut spawn_events: EventReader<SpawnEnemyEvent>,
@@ -77,7 +82,7 @@ pub fn create_enemy_listener(
     }
 }
 
-pub fn enemy_motor(
+fn enemy_motor(
     mut query: Query<
         (
             &Transform,

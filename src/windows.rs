@@ -1,5 +1,5 @@
 use bevy::{
-    app::AppExit,
+    app::{App, AppExit, Startup, Update},
     ecs::prelude::*,
     input::{keyboard::KeyCode, ButtonInput},
     math::{vec2, Vec2},
@@ -8,12 +8,17 @@ use bevy::{
 
 use crate::player::components::*;
 
-pub(crate) fn window_start(mut windows: Query<&mut Window>) {
+pub(crate) fn init(mut app: &mut App) {
+    app.add_systems(Startup, window_start);
+    app.add_systems(Update, window_update);
+}
+
+fn window_start(mut windows: Query<&mut Window>) {
     let mut window = windows.single_mut();
     window.cursor.visible = false;
 }
 
-pub(crate) fn window_update(
+fn window_update(
     mut commands: Commands,
     mut windows: Query<&mut Window>,
     mut player: Query<Entity, (With<Player>, Without<Window>)>,

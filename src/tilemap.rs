@@ -59,8 +59,8 @@ pub(crate) fn init(app: &mut App) {
     app.add_event::<CreateTilemapEvent>();
     app.add_event::<SpawnTileFromIdEvent>();
 
-    app.add_systems(FixedFirst, TileMap::listen_create_tilemap);
-    app.add_systems(FixedFirst, TileMap::listen_spawn_tile_from_id);
+    app.add_systems(FixedFirst, listen_create_tilemap);
+    app.add_systems(FixedFirst, listen_spawn_tile_from_id);
 }
 
 impl TileMap {

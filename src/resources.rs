@@ -51,7 +51,11 @@ impl GameResourceHandles {
     }
 }
 
-pub fn init_resources(
+pub(crate) fn init(mut app: &mut App) {
+    app.add_systems(PreStartup, load_resources);
+}
+
+pub(crate) fn load_resources(
     mut cmd: Commands,
     mut assets: ResMut<AssetServer>,
     mut resources: ResMut<GameResourceHandles>,

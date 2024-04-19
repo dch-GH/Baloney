@@ -8,7 +8,11 @@ pub struct CreateSprite3dEvent {
     pub image: Handle<Image>,
 }
 
-pub fn create_sprite_listener(
+pub(crate) fn init(mut app: &mut App) {
+    app.add_systems(FixedFirst, create_sprite_listener);
+}
+
+fn create_sprite_listener(
     mut commands: Commands,
     mut sprite_params: Sprite3dParams,
     mut events: EventReader<CreateSprite3dEvent>,

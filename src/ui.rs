@@ -47,7 +47,7 @@ impl UiMessage {
     }
 }
 
-pub fn init(app: &mut App) {
+pub(crate) fn init(app: &mut App) {
     app.add_event::<CreateUiEvent>();
     app.add_event::<AddUiMessageEvent>();
 

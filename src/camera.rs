@@ -1,6 +1,10 @@
 use bevy::prelude::*;
 
-use crate::{LowResCamera, MainCamera};
+#[derive(Component)]
+pub struct LowResCamera;
+
+#[derive(Component)]
+pub struct MainCamera;
 
 pub(crate) fn init(mut app: &mut App) {
     // app.add_event::<SetCameraModeEvent>();
