@@ -7,6 +7,7 @@ mod player;
 mod resources;
 mod sprite;
 mod tilemap;
+mod ui;
 mod utils;
 mod windows;
 
@@ -17,6 +18,7 @@ use player::*;
 use resources::*;
 use sprite::{create_sprite_listener, CreateSprite3dEvent};
 use tilemap::*;
+use ui::*;
 
 use bevy::{
     asset::{self, LoadState},
@@ -82,14 +84,17 @@ fn main() {
 
     // Resources
     {
+        app.insert_resource(UserSettings { mouse_sens: 0.005 })
+            .insert_resource(GameResourceHandles::default());
+
         app.insert_resource(CameraState::default());
         app.insert_resource(CameraParameters(PhysicalCameraParameters {
             aperture_f_stops: 1.0,
             shutter_speed_s: 1.0 / 125.0,
             sensitivity_iso: 100.0,
         }));
-        app.insert_resource(UserSettings { mouse_sens: 0.005 })
-            .insert_resource(GameResourceHandles::default());
+
+        app.insert_resource(ui::GameUi { ui_entity: None });
     }
 
     // Events + Listeners
@@ -97,8 +102,9 @@ fn main() {
         app.add_event::<SpawnEnemyEvent>();
         app.add_event::<CreateSprite3dEvent>();
 
+        ui::init(&mut app);
         player::init(&mut app);
-        TileMap::init(&mut app);
+        tilemap::init(&mut app);
         camera::init(&mut app);
     }
 
@@ -121,6 +127,7 @@ fn start(
     cam_parameters: Res<CameraParameters>,
     mut tilemap_event: EventWriter<CreateTilemapEvent>,
     mut spawn_player_event: EventWriter<player::events::SpawnPlayerEvent>,
+    mut ui_event: EventWriter<CreateUiEvent>,
 ) {
     // Ambient light
     commands.insert_resource(AmbientLight {
@@ -161,36 +168,9 @@ fn start(
         .spawn((MainCamera {}, Camera2dBundle { ..default() }))
         .id();
 
-    commands
-        .spawn((
-            NodeBundle {
-                style: Style {
-                    width: Val::Percent(100.),
-                    height: Val::Percent(100.),
-                    flex_direction: FlexDirection::Column,
-                    justify_content: JustifyContent::Center,
-                    align_items: AlignItems::Center,
-                    ..default()
-                },
-                ..default()
-            },
-            TargetCamera(main_camera),
-        ))
-        .with_children(|parent| {
-            parent.spawn(ImageBundle {
-                style: Style {
-                    width: Val::Percent(100.),
-                    height: Val::Percent(100.),
-                    position_type: PositionType::Absolute,
-                    ..default()
-                },
-                image: UiImage {
-                    texture: resources.render_texture.clone(),
-                    ..default()
-                },
-                ..default()
-            });
-        });
+    ui_event.send(ui::CreateUiEvent {
+        camera_entity: main_camera,
+    });
 
     tilemap_event.send(CreateTilemapEvent);
     spawn_player_event.send(player::events::SpawnPlayerEvent);

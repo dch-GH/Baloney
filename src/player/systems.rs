@@ -16,7 +16,8 @@ use rand::Rng;
 use crate::{
     camera::{CameraSceneParams, CameraState},
     enemy::Enemy,
-    mathx, GameResourceHandles, LowResCamera, MainCamera, MaterialName, UserSettings,
+    mathx, AddUiMessageEvent, GameResourceHandles, LowResCamera, MainCamera, MaterialName,
+    UserSettings,
 };
 
 use crate::player::components::*;
@@ -210,6 +211,7 @@ pub fn dice_system(
     resources: Res<GameResourceHandles>,
     mut camera_state: ResMut<CameraState>,
     time: Res<Time>,
+    mut add_message_event: EventWriter<AddUiMessageEvent>,
 ) {
     if player_query.is_empty() {
         return;
@@ -296,7 +298,11 @@ pub fn dice_system(
             dice.rolled = true;
 
             let result = get_dice_result(&dice_xform);
-            println!("You rolled a {:?}", result);
+            let message = format!("You rolled a {:?}!", result);
+            add_message_event.send(AddUiMessageEvent {
+                message,
+                duration: 3.0,
+            });
 
             cam_xform.translation =
                 dice_xform.translation + Vec3::Y * 0.9 + Vec3::X * 0.8 + Vec3::Z * 0.8;
