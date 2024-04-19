@@ -9,6 +9,7 @@ pub struct CreateSprite3dEvent {
 }
 
 pub(crate) fn init(mut app: &mut App) {
+    app.add_event::<CreateSprite3dEvent>();
     app.add_systems(FixedFirst, create_sprite_listener);
 }
 

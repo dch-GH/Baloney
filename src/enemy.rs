@@ -43,6 +43,7 @@ pub struct SpawnEnemyEvent {
 }
 
 pub(crate) fn init(mut app: &mut App) {
+    app.add_event::<SpawnEnemyEvent>();
     app.add_systems(FixedFirst, create_enemy_listener);
     app.add_systems(FixedUpdate, enemy_motor);
 }

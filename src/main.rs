@@ -91,10 +91,7 @@ fn main() {
         app.insert_resource(ui::GameUi { ui_entity: None });
     }
 
-    // Events + Listeners
-    app.add_event::<SpawnEnemyEvent>();
-    app.add_event::<CreateSprite3dEvent>();
-
+    // Modules init Events, Listeners, and Systems.
     resources::init(&mut app);
     windows::init(&mut app);
     ui::init(&mut app);
