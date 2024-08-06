@@ -1,6 +1,6 @@
 use bevy::{
     app::*,
-    color::{palettes::tailwind, Color},
+    color::{palettes::tailwind, Color, LinearRgba, Srgba},
     ecs::{
         event::{Event, EventReader},
         system::Commands,
@@ -55,6 +55,7 @@ pub(crate) fn spawn_player_listener(
                 transform: Transform::IDENTITY.with_translation(Dir3::Y * 64.0),
                 point_light: PointLight {
                     intensity: 20_000.0,
+                    color: Srgba::hex("#faebd7").unwrap().into(),
                     shadows_enabled: (false),
                     range: 32.0,
                     ..PointLight::default()
