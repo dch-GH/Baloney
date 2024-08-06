@@ -14,9 +14,9 @@ incremental = true
 opt-level = 3
 
 [dependencies]
-bevy = "0.13.1"
-bevy_obj = "0.13.0"
-bevy_rapier3d = { version = "0.25.0", features = ["debug-render-3d"] }
-bevy_sprite3d = "2.8.0"
-tiled = "0.11.2"
+bevy = "0.14.1"
+bevy_obj = "0.14.0"
+bevy_rapier3d = { version = "0.27.0", features = ["debug-render-3d"] }
+bevy_sprite3d = "3.0.0"
+tiled = "0.12.0"
 rand = "0.8.5"

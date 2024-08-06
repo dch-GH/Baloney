@@ -108,7 +108,7 @@ fn enemy_motor(
 
         motor.time_since_chose_direction += dt;
         let mut velocity = motor.move_dir * 2.0 * dt;
-        velocity += Direction3d::NEG_Y * crate::mathx::GRAVITY * dt;
+        velocity += Dir3::NEG_Y * crate::mathx::GRAVITY * dt;
         controller.translation = Some(velocity);
 
         gizmos.line(

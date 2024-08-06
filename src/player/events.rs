@@ -1,16 +1,14 @@
 use bevy::{
     app::*,
+    color::{palettes::tailwind, Color},
     ecs::{
         event::{Event, EventReader},
         system::Commands,
     },
-    math::{primitives::Direction3d, vec3, Vec3},
+    math::{vec3, Dir3, Vec3},
     pbr::{PointLight, PointLightBundle},
-    render::color::Color,
-    transform::{
-        components::{GlobalTransform, Transform},
-        TransformBundle,
-    },
+    prelude::TransformBundle,
+    transform::components::{GlobalTransform, Transform},
 };
 
 use crate::{
@@ -37,7 +35,6 @@ pub(crate) fn spawn_player_listener(
                 .with_translation(Vec3::X * 3.0 + Vec3::Z * 16.0 + Vec3::Y * 1.2),
             point_light: PointLight {
                 intensity: 20_000.0,
-                color: Color::ORANGE_RED,
                 shadows_enabled: (false),
                 range: 32.0,
                 ..PointLight::default()
@@ -55,10 +52,9 @@ pub(crate) fn spawn_player_listener(
         // RPG light
         commands
             .spawn(PointLightBundle {
-                transform: Transform::IDENTITY.with_translation(Direction3d::Y * 64.0),
+                transform: Transform::IDENTITY.with_translation(Dir3::Y * 64.0),
                 point_light: PointLight {
                     intensity: 20_000.0,
-                    color: Color::ANTIQUE_WHITE,
                     shadows_enabled: (false),
                     range: 32.0,
                     ..PointLight::default()

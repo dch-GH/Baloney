@@ -1,5 +1,6 @@
 use std::{borrow::Borrow, collections::HashSet, ops::Mul, thread::panicking};
 
+use bevy::prelude::*;
 use bevy::{app::FixedMain, input::mouse::MouseMotion, math::*, prelude::*};
 
 use bevy_rapier3d::{
@@ -115,7 +116,7 @@ pub fn move_player(
     velocity += wish_move * mv_speed * sprint_mult * dt;
 
     if !has_noclip {
-        velocity += Direction3d::NEG_Y * 9.82 * dt;
+        velocity += Dir3::NEG_Y * 9.82 * dt;
     } else {
         if key.pressed(KeyCode::KeyR) {
             velocity.y += mv_speed * sprint_mult * dt;
@@ -126,7 +127,7 @@ pub fn move_player(
         }
     }
 
-    let eye_offset = Direction3d::Y * 0.7;
+    let eye_offset = Dir3::Y * 0.7;
     eye.position = player_xform.translation + eye_offset;
 
     if camera_state.scene_params.is_none() {
@@ -310,7 +311,7 @@ pub fn dice_system(
             let sl_pitch = mathx::f32::degrees_to_radians(-90.0);
             commands.spawn(SpotLightBundle {
                 spot_light: SpotLight {
-                    color: Color::hex("#e6bfaa").unwrap(),
+                    color: Srgba::hex("#e6bfaa").unwrap().into(),
                     intensity: 150_000.0,
                     shadows_enabled: true,
                     ..default()

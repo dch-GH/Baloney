@@ -22,6 +22,7 @@ use ui::*;
 
 use bevy::{
     asset::{self, LoadState},
+    color::palettes::tailwind,
     ecs::query::QueryData,
     gltf::Gltf,
     input::{self, keyboard::KeyboardInput, mouse::MouseMotion},
@@ -33,10 +34,10 @@ use bevy::{
         render_resource::{SamplerDescriptor, Texture, TextureId},
         texture::{ImageAddressMode, ImageLoaderSettings, ImageSampler, ImageSamplerDescriptor},
     },
-    utils::petgraph::{data::Create, visit::Control},
     window::{Cursor, CursorGrabMode},
 };
 
+use bevy::color::prelude::*;
 use bevy_obj::ObjPlugin;
 use bevy_rapier3d::{control, prelude::*};
 
@@ -86,6 +87,7 @@ fn main() {
             aperture_f_stops: 1.0,
             shutter_speed_s: 1.0 / 125.0,
             sensitivity_iso: 100.0,
+            ..default()
         }));
 
         app.insert_resource(ui::GameUi { ui_entity: None });
@@ -119,7 +121,7 @@ fn start(
 ) {
     // Ambient light
     commands.insert_resource(AmbientLight {
-        color: Color::ORANGE_RED,
+        color: Color::Srgba(tailwind::ORANGE_500),
         brightness: 0.2,
     });
 

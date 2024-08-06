@@ -1,7 +1,4 @@
-use bevy::{
-    prelude::*,
-    ui::{UiMeta, UiSurface},
-};
+use bevy::{color::palettes::tailwind, prelude::*, ui::UiMeta};
 
 use crate::GameResourceHandles;
 
@@ -127,7 +124,7 @@ fn ui_message_system(
                     TextStyle {
                         font: resources.font.clone(),
                         font_size: 32.0,
-                        color: Color::YELLOW,
+                        color: tailwind::YELLOW_100.into(),
                     },
                 ),
                 ..default()

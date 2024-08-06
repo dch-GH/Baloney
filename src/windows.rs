@@ -50,7 +50,7 @@ fn window_update(
     }
 
     if key.just_released(KeyCode::Escape) {
-        app_exit_events.send(AppExit);
+        app_exit_events.send(AppExit::Success);
     }
 
     if key.just_pressed(KeyCode::F11) {
